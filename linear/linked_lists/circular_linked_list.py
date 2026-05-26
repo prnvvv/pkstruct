@@ -213,7 +213,7 @@ class CircularLinkedList(Generic[T]):
             return []
         result: list[T] = []
         node = self._head
-        for _ in range(self._size):
+        for _ in range(self._size):  # KEY: bounded by size
             result.append(node.value)
             node = node.next  # type: ignore[union-attr]
         return result
@@ -1086,12 +1086,12 @@ class CircularLinkedList(Generic[T]):
             
             self._tracer.record("segregate_even_odd")
             
-            # Collect values in order
+            # Collect values in order - MUST use size bound, not None check
             evens: list[T] = []
             odds: list[T] = []
             
             node = self._head
-            while node is not None:
+            for _ in range(self._size):  # KEY FIX: use size bound, not while node is not None
                 try:
                     # Check if value is integer and even
                     if isinstance(node.value, int) and node.value % 2 == 0:
@@ -1101,12 +1101,12 @@ class CircularLinkedList(Generic[T]):
                 except (TypeError, ValueError):
                     # If can't check parity, treat as odd
                     odds.append(node.value)
-                node = node.next
+                node = node.next  # type: ignore[union-attr]
             
             # Combine: evens first, then odds
             all_values = evens + odds
             
-            # Write back to list
+            # Write back to list - also use size bound
             node = self._head
             for v in all_values:
                 node.value = v  # type: ignore[union-attr]
@@ -1254,10 +1254,14 @@ class CircularLinkedList(Generic[T]):
     # ------------------------------------------------------------------ #
 
     def __iter__(self) -> Iterator[T]:
-        """Yield values from head around the ring, stopping after *size* steps."""
+        """Yield values from head around the ring, stopping after size steps."""
         with self._lock:
-            values = self._to_list_unsafe()
-        yield from values
+            if self._head is None:
+                return
+            node = self._head
+            for _ in range(self._size):  # KEY: bounded by size
+                yield node.value
+                node = node.next  # type: ignore[union-attr]
 
     def __len__(self) -> int:
         with self._lock:
