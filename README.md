@@ -57,7 +57,7 @@ print(cll.visualize())
 
 ## Modules Roadmap
 
-- `pkstruct.linear` — linked lists, stacks, queues ✅
+- `pkstruct.linear` — linked lists
 - `pkstruct.trees` — BST, AVL, Red-Black, Trie *(planned)*
 - `pkstruct.graphs` — adjacency list/matrix, weighted *(planned)*
 - `pkstruct.spatial` — k-d tree, segment tree *(planned)*
