@@ -44,7 +44,7 @@ Documentation = "https://pkstruct.readthedocs.io"
 "Bug Tracker" = "https://github.com/pkstruct/pkstruct/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pkstruct"]
+packages = ["src/pkstruct"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -64,7 +64,8 @@ line-length = 100
 target-version = ["py310", "py311", "py312"]
 
 [tool.pytest.ini_options]
-testpaths = ["linear/tests"]
+testpaths = ["src/pkstruct/linear/tests"]
+pythonpath = ["src"]
 addopts = "-v --tb=short"
 python_files = "test_*.py"
 python_classes = "Test*"
