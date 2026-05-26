@@ -63,3 +63,7 @@ class DebugTracer:
         for e in self._entries:
             counts[e["op"]] = counts.get(e["op"], 0) + 1
         return counts
+    
+    def get_events(self) -> list[dict[str, Any]]:
+        """Return all recorded events."""
+        return self._entries

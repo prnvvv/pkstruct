@@ -11,6 +11,10 @@ from typing import Any, Generic, TypeVar
 
 from pkstruct.linear.linked_lists.nodes import SinglyNode
 from pkstruct.shared.debugging import DebugTracer
+from pkstruct.shared.threading import StructureLock
+from pkstruct.shared.serializers import deserialize_from_json, serialize_to_json
+from pkstruct.shared.validators import validate_index, validate_range
+from pkstruct.shared.debugging import DebugTracer
 from pkstruct.shared.exceptions import (
     EmptyStructureError,
     IndexOutOfRangeError,
@@ -89,6 +93,20 @@ class SinglyLinkedList(Generic[T]):
         """
         items: list[T] = deserialize_from_json(json_str)  # type: ignore[assignment]
         return cls.from_list(items)
+    def to_json(self) -> str:
+        """Serialize the list to a JSON string (list of items)."""
+        return serialize_to_json(self.to_list())
+
+    def serialize(self) -> str:
+        """Alias for to_json() for test compatibility."""
+        return self.to_json()
+
+    def deserialize(self, json_str: str) -> None:
+        """Alias for from_json() for test compatibility."""
+        new_list = self.from_json(json_str)
+        self.clear()
+        for v in new_list.to_list():
+            self.insert(v)
 
     def copy(self) -> "SinglyLinkedList[T]":
         """Return a shallow copy of this list."""
@@ -505,47 +523,180 @@ class SinglyLinkedList(Generic[T]):
             left += 1
             right -= 1
 
-    def rotate(
-        self, start: int, end: int, direction: bool = True, shift: int = 1
-    ) -> None:
-        """Rotate a sub-range of the list.
-
+    def rotate_full(self, start: int, end: int, direction: bool = True, shift: int = 1) -> None:
+        """
+        Rotate a sub-range of the list (full interface).
+        
         Args:
-            start:     Inclusive start index.
-            end:       Inclusive end index.
-            direction: True = rotate right (last element moves to start),
-                       False = rotate left (first element moves to end).
-            shift:     Number of positions to rotate.
+            start: Inclusive start index
+            end: Inclusive end index
+            direction: True = rotate right, False = rotate left
+            shift: Number of positions to rotate
         """
         with self._lock:
-            if self._size <= 1:
-                return
-            ns, ne = validate_range(start, end, self._size)
-            length = ne - ns + 1
+            if self._size == 0:
+                raise EmptyStructureError("rotate an empty list")
+            
+            # Normalize indices
+            if start < 0:
+                start = self._size + start
+            if end < 0:
+                end = self._size + end
+            
+            validate_range(start, end, self._size)
+            
+            length = end - start + 1
             if length <= 1:
                 return
-            effective = shift % length
-            if effective == 0:
+            
+            effective_shift = shift % length
+            if effective_shift == 0:
                 return
+            
             if not direction:
-                effective = length - effective
-            # Extract segment values, rotate, write back
-            segment: list[T] = []
-            cur = self._head
-            for i in range(self._size):
-                assert cur is not None
-                if ns <= i <= ne:
-                    segment.append(cur.value)
-                cur = cur.next
-            rotated = segment[-effective:] + segment[:-effective]
-            cur = self._head
-            seg_idx = 0
-            for i in range(self._size):
-                assert cur is not None
-                if ns <= i <= ne:
-                    cur.value = rotated[seg_idx]
-                    seg_idx += 1
-                cur = cur.next
+                effective_shift = length - effective_shift
+            
+            self._tracer.record("rotate", start=start, end=end, 
+                                direction=direction, shift=effective_shift)
+            
+            # Get values in range
+            values = []
+            node = self._node_at(start)
+            for _ in range(length):
+                values.append(node.value)
+                node = node.next  # type: ignore[union-attr]
+            
+            # Rotate values
+            rotated = values[-effective_shift:] + values[:-effective_shift]
+            
+            # Write back
+            node = self._node_at(start)
+            for v in rotated:
+                node.value = v
+                node = node.next  # type: ignore[union-attr]
+
+    def rotate(
+        self,
+        shift: int = 1,
+        start: int | None = None,
+        end: int | None = None,
+        direction: bool = True,
+    ) -> None:
+        """
+        Rotate the list or a sub-range by `shift` positions.
+        
+        This method supports two calling patterns:
+        
+        1. Simple rotation (entire list):
+            >>> ll.rotate(2)  # Rotate entire list right by 2
+            >>> ll.rotate(-2) # Rotate entire list left by 2
+        
+        2. Advanced rotation (sub-range):
+            >>> ll.rotate(shift=2, start=1, end=5, direction=True)  # Rotate right by 2
+        
+        Args:
+            shift: Number of positions to rotate. Positive = right, negative = left.
+            start: Inclusive start index (None = 0, entire list start)
+            end: Inclusive end index (None = size-1, entire list end)
+            direction: True = rotate right, False = rotate left (ignored if shift negative)
+        
+        Raises:
+            EmptyStructureError: If list is empty
+            InvalidRangeError: If start/end indices are invalid
+        """
+        with self._lock:
+            if self._size == 0:
+                raise EmptyStructureError("rotate an empty list")
+            
+            # Handle negative shift as left rotation
+            actual_shift = shift
+            if shift < 0:
+                actual_shift = abs(shift)
+                direction = False
+            
+            # Set default range to entire list
+            actual_start = 0 if start is None else start
+            actual_end = self._size - 1 if end is None else end
+            
+            # Normalize negative indices
+            if actual_start < 0:
+                actual_start = self._size + actual_start
+            if actual_end < 0:
+                actual_end = self._size + actual_end
+            
+            # Validate range
+            validate_range(actual_start, actual_end, self._size)
+            
+            length = actual_end - actual_start + 1
+            if length <= 1:
+                return
+            
+            # Calculate effective shift
+            effective_shift = actual_shift % length
+            if effective_shift == 0:
+                return
+            
+            # Convert left rotation to right rotation
+            if not direction:
+                effective_shift = length - effective_shift
+            
+            self._tracer.record("rotate", shift=actual_shift, start=actual_start, 
+                                end=actual_end, direction=direction)
+            
+            # For full list rotation, we can use a more efficient approach
+            if actual_start == 0 and actual_end == self._size - 1:
+                self._rotate_full_list(effective_shift)
+            else:
+                self._rotate_subrange(actual_start, actual_end, effective_shift)
+
+
+    def _rotate_full_list(self, shift: int) -> None:
+        """
+        Efficiently rotate the entire list by `shift` positions right.
+        
+        This is O(n) but uses value rotation rather than pointer manipulation
+        to maintain consistency across all list types.
+        """
+        if shift == 0 or self._size <= 1:
+            return
+        
+        # Get all values
+        values = self._to_list_unsafe()
+        
+        # Rotate values
+        rotated = values[-shift:] + values[:-shift]
+        
+        # Write back
+        node = self._head
+        for v in rotated:
+            node.value = v  # type: ignore[union-attr]
+            node = node.next  # type: ignore[assignment]
+
+
+    def _rotate_subrange(self, start: int, end: int, shift: int) -> None:
+        """
+        Rotate a sub-range [start, end] by `shift` positions right.
+        Uses value reassignment for simplicity and correctness.
+        """
+        # Collect nodes in range
+        nodes: list = []
+        node = self._node_at(start)
+        for _ in range(end - start + 1):
+            nodes.append(node)
+            node = node.next  # type: ignore[union-attr]
+        
+        # Get values and rotate
+        values = [n.value for n in nodes]
+        rotated = values[-shift:] + values[:-shift]
+        
+        # Write back rotated values
+        for n, v in zip(nodes, rotated):
+            n.value = v
+
+    def rotate_entire(self, shift: int) -> None:
+        """Rotate entire list by shift (test compatibility wrapper)."""
+        if self._size > 0:
+            self.rotate(start=0, end=self._size - 1, direction=True, shift=shift)
 
     # ------------------------------------------------------------------ #
     # Swapping                                                             #
@@ -862,28 +1013,43 @@ class SinglyLinkedList(Generic[T]):
                     nodes[i].value, nodes[i + 1].value = b, a
 
     def segregate_even_odd(self) -> None:
-        """Move all even-valued elements before odd-valued elements.
-
-        Works only for integer-valued lists.  Order within each group is
-        preserved (stable).
+        """
+        Move all even-valued elements before odd-valued elements.
+        
+        Works only for integer-valued lists. Order within each group is
+        preserved (stable). Non-integer values are treated as odd.
         """
         with self._lock:
+            if self._size <= 1:
+                return
+            
+            self._tracer.record("segregate_even_odd")
+            
+            # Collect values in order
             evens: list[T] = []
             odds: list[T] = []
-            cur = self._head
-            while cur is not None:
+            
+            node = self._head
+            while node is not None:
                 try:
-                    if int(cur.value) % 2 == 0:  # type: ignore[arg-type]
-                        evens.append(cur.value)
+                    # Check if value is integer and even
+                    if isinstance(node.value, int) and node.value % 2 == 0:
+                        evens.append(node.value)
                     else:
-                        odds.append(cur.value)
+                        odds.append(node.value)
                 except (TypeError, ValueError):
-                    odds.append(cur.value)
-                cur = cur.next
-            self._head = None
-            self._size = 0
-            for v in evens + odds:
-                self._append(v)
+                    # If can't check parity, treat as odd
+                    odds.append(node.value)
+                node = node.next
+            
+            # Combine: evens first, then odds
+            all_values = evens + odds
+            
+            # Write back to list
+            node = self._head
+            for v in all_values:
+                node.value = v  # type: ignore[union-attr]
+                node = node.next  # type: ignore[assignment]
 
     # ------------------------------------------------------------------ #
     # Visualization                                                        #

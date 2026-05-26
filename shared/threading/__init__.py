@@ -45,3 +45,10 @@ class StructureLock:
 
     def __exit__(self, *_: object) -> None:
         self._lock.release()
+    def acquire(self) -> None:
+        """Acquire the lock."""
+        self._lock.acquire()
+
+    def release(self) -> None:
+        """Release the lock."""
+        self._lock.release()
