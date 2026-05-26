@@ -140,3 +140,11 @@ data/
 
 # poetry.lock
 # Pipfile.lock
+
+__pycache__/
+*.pyc
+dist/
+*.egg-info/
+pkstruct_test_env/
+files.txtfor
+.pytest_cache/
