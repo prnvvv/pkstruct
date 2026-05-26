@@ -174,9 +174,9 @@ def test_delete_from_empty(cls: ListClass) -> None:
 def test_get_valid_index(cls: ListClass) -> None:
     """get() returns correct node value for valid indices."""
     ll = _build(cls, [10, 20, 30])
-    assert ll.get(0).value == 10
-    assert ll.get(1).value == 20
-    assert ll.get(2).value == 30
+    assert ll.get(0) == 10
+    assert ll.get(1) == 20
+    assert ll.get(2) == 30
 
 
 @pytest.mark.parametrize("cls", ALL_LIST_CLASSES)

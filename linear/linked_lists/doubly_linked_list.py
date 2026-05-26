@@ -1109,7 +1109,21 @@ class DoublyLinkedList(Generic[T]):
                 "values": self._to_list_unsafe(),
                 "events": self._tracer.get_events(),
             }
+    # ------------------------------------------------------------------ #
+    #  Public properties for testing compatibility                        #
+    # ------------------------------------------------------------------ #
 
+    @property
+    def head(self):
+        """Return the head node (for testing compatibility)."""
+        with self._lock:
+            return self._head
+
+    @property
+    def tail(self):
+        """Return the tail node (for testing compatibility)."""
+        with self._lock:
+            return self._tail
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #

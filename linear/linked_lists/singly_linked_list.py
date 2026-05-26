@@ -1084,7 +1084,26 @@ class SinglyLinkedList(Generic[T]):
                 "values": self.to_list(),
                 "tracer": self._tracer.summary(),
             }
+    # ------------------------------------------------------------------ #
+    #  Public properties for testing compatibility                        #
+    # ------------------------------------------------------------------ #
 
+    @property
+    def head(self):
+        """Return the head node (for testing compatibility)."""
+        with self._lock:
+            return self._head
+
+    @property
+    def tail(self):
+        """Return the tail node (for testing compatibility)."""
+        with self._lock:
+            if self._head is None:
+                return None
+            node = self._head
+            while node.next:
+                node = node.next
+            return node
     # ------------------------------------------------------------------ #
     # Dunder methods                                                       #
     # ------------------------------------------------------------------ #
