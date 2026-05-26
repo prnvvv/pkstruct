@@ -34,7 +34,7 @@ class ForwardIterator:
             current = lst.head
             steps = 0
             while current is not None and steps < size:
-                yield current.data
+                yield current.value
                 current = current.next
                 steps += 1
         elif isinstance(lst, (SinglyLinkedList, DoublyLinkedList)):
@@ -44,7 +44,7 @@ class ForwardIterator:
                 if id(current) in visited:
                     break
                 visited.add(id(current))
-                yield current.data
+                yield current.value
                 current = current.next
         else:
             raise TypeError(
@@ -82,7 +82,7 @@ class BackwardIterator:
                 if id(current) in visited:
                     break
                 visited.add(id(current))
-                yield current.data
+                yield current.value
                 current = current.prev
         elif isinstance(lst, (SinglyLinkedList, CircularLinkedList)):
             raise TypeError(
@@ -111,9 +111,10 @@ class CircularIterator:
         TypeError: If *list_instance* is not a CircularLinkedList.
     """
 
-    def __init__(self, list_instance: Any, max_cycles: Optional[int] = None) -> None:
+    def __init__(self, list_instance: Any, max_cycles: Optional[int] = None, max_steps: Optional[int] = None) -> None:
         self._list = list_instance
         self._max_cycles = max_cycles
+        self._max_steps = max_steps
 
     def __iter__(self) -> Iterator[Any]:
         _, _, CircularLinkedList = _get_list_types()
@@ -128,17 +129,18 @@ class CircularIterator:
             return
 
         size = lst.size
-        max_steps = (self._max_cycles * size) if self._max_cycles is not None else None
+        if self._max_steps is not None:
+            limit = self._max_steps
+        elif self._max_cycles is not None:
+            limit = self._max_cycles * size
+        else:
+            limit = None
 
         current = lst.head
         steps = 0
-
-        while True:
-            if max_steps is not None and steps >= max_steps:
-                break
-            yield current.data
+        while limit is None or steps < limit:
+            yield current.value
             current = current.next
             steps += 1
-            # Safety: if next is somehow None, stop
             if current is None:
                 break

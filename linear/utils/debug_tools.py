@@ -41,12 +41,12 @@ def memory_usage(list_instance: Any) -> int:
     if isinstance(list_instance, CircularLinkedList):
         per_node = _CIRCULAR_NODE_BYTES
         current = list_instance.head
-        size = list_instance.size
+        size = list_instance.size()
         steps = 0
         total = 0
         while current is not None and steps < size:
             try:
-                value_bytes = sys.getsizeof(current.data)
+                value_bytes = sys.getsizeof(current.value)
             except Exception:
                 value_bytes = 0
             total += per_node + value_bytes
@@ -71,7 +71,7 @@ def memory_usage(list_instance: Any) -> int:
             break
         visited.add(id(current))
         try:
-            value_bytes = sys.getsizeof(current.data)
+            value_bytes = sys.getsizeof(current.value)
         except Exception:
             value_bytes = 0
         total += per_node + value_bytes
@@ -157,10 +157,10 @@ def _validate_singly(lst: Any) -> tuple[list[str], bool]:
         counted += 1
         current = current.next
 
-    size_matches = counted == lst.size
+    size_matches = counted == lst.size()
     if not size_matches:
         errors.append(
-            f"Size mismatch: recorded={lst.size}, counted={counted}."
+            f"Size mismatch: recorded={lst.size()}, counted={counted}."
         )
 
     return errors, size_matches
@@ -177,13 +177,13 @@ def _validate_doubly(lst: Any) -> tuple[list[str], bool]:
 
     while current is not None:
         if id(current) in visited:
-            errors.append(f"Cycle detected at node with data={current.data!r}.")
+            errors.append(f"Cycle detected at node with data={current.value!r}.")
             break
         visited.add(id(current))
 
         if current.prev is not prev_node:
             errors.append(
-                f"Broken prev pointer at node data={current.data!r}: "
+                f"Broken prev pointer at node data={current.value!r}: "
                 f"expected id={id(prev_node)}, got id={id(current.prev)}."
             )
 
@@ -194,14 +194,14 @@ def _validate_doubly(lst: Any) -> tuple[list[str], bool]:
     # Verify tail pointer
     if lst.tail is not None and lst.tail is not prev_node:
         errors.append(
-            f"Tail pointer mismatch: tail.data={lst.tail.data!r}, "
-            f"last traversed data={prev_node.data if prev_node else None!r}."
+            f"Tail pointer mismatch: tail.data={lst.tail.value!r}, "
+            f"last traversed data={prev_node.value if prev_node else None!r}."
         )
 
-    size_matches = counted == lst.size
+    size_matches = counted == lst.size()
     if not size_matches:
         errors.append(
-            f"Size mismatch: recorded={lst.size}, counted={counted}."
+            f"Size mismatch: recorded={lst.size()}, counted={counted}."
         )
 
     return errors, size_matches
@@ -223,7 +223,7 @@ def _validate_circular(lst: Any) -> tuple[list[str], bool]:
 
     # Count nodes (bounded by reported size + 1 to detect over-count)
     counted = 0
-    limit = lst.size + 1
+    limit = lst.size() + 1
     current = lst.head
     while current is not None and counted < limit:
         counted += 1
@@ -231,10 +231,10 @@ def _validate_circular(lst: Any) -> tuple[list[str], bool]:
         if current is lst.head:
             break
 
-    size_matches = counted == lst.size
+    size_matches = counted == lst.size()
     if not size_matches:
         errors.append(
-            f"Size mismatch: recorded={lst.size}, counted={counted}."
+            f"Size mismatch: recorded={lst.size()}, counted={counted}."
         )
 
     return errors, size_matches

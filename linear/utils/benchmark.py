@@ -16,6 +16,7 @@ def _timeit(fn, *args, **kwargs) -> float:
 def benchmark_operations(
     list_class: type,
     sizes: list[int] | None = None,
+    n: int | None = None,
 ) -> dict[str, Any]:
     """Time insert / delete / get / search operations for *list_class*.
 
@@ -23,6 +24,7 @@ def benchmark_operations(
         list_class: A pkstruct linked list class to benchmark.
         sizes: List of element counts to test against.
             Defaults to ``[100, 1000, 10000]``.
+        n: If provided, sets sizes to [n].
 
     Returns:
         Nested dict::
@@ -39,6 +41,8 @@ def benchmark_operations(
                 ...
             }
     """
+    if n is not None:
+        sizes = [n]
     if sizes is None:
         sizes = [100, 1000, 10000]
 
@@ -96,11 +100,12 @@ def benchmark_operations(
     return results
 
 
-def compare_with_builtins(sizes: list[int] | None = None) -> dict[str, Any]:
+def compare_with_builtins(sizes: list[int] | None = None, n: int | None = None) -> dict[str, Any]:
     """Compare all pkstruct list types against Python ``list`` and ``deque``.
 
     Args:
         sizes: List of element counts to test. Defaults to ``[100, 1000]``.
+        n: If provided, sets sizes to [n].
 
     Returns:
         Nested dict::
@@ -113,6 +118,8 @@ def compare_with_builtins(sizes: list[int] | None = None) -> dict[str, Any]:
                 ...
             }
     """
+    if n is not None:
+        sizes = [n]
     if sizes is None:
         sizes = [100, 1000]
 

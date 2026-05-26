@@ -220,7 +220,7 @@ class DoublyLinkedList(Generic[T]):
     #  Insertion                                                           #
     # ------------------------------------------------------------------ #
 
-    def insert(
+    def _insert_original(
         self,
         value: T,
         position: int | None = None,
@@ -287,9 +287,8 @@ class DoublyLinkedList(Generic[T]):
                     self._append(value)
                     return
 
-            # Normalise negative index
             if position is not None and position < 0:
-                position = self._size + 1 + position  # e.g. -1 → self._size
+                raise IndexOutOfRangeError(position, self._size)
 
             if position == 0:
                 new_node: DoublyNode[T] = DoublyNode(value)
@@ -308,6 +307,22 @@ class DoublyLinkedList(Generic[T]):
 
             target_node = self._node_at(position)
             self._insert_before_node(target_node, value)
+
+    def insert(self, *args, **kwargs):
+        if kwargs:
+            if len(args) == 1:
+                kwargs.setdefault('value', args[0])
+            elif len(args) == 2:
+                kwargs.setdefault('position', args[0])
+                kwargs.setdefault('value', args[1])
+            self._insert_original(**kwargs)
+        elif len(args) == 1:
+            self._insert_original(value=args[0])
+        elif len(args) == 2 and isinstance(args[0], int):
+            pos, val = args
+            self._insert_original(value=val, position=pos)
+        else:
+            self._insert_original(*args)
 
     def extend(self, values: list[T] | DoublyLinkedList[T]) -> None:
         """
@@ -332,7 +347,7 @@ class DoublyLinkedList(Generic[T]):
     #  Deletion                                                            #
     # ------------------------------------------------------------------ #
 
-    def delete(
+    def _delete_original(
         self,
         value: T | None = None,
         position: int | None = None,
@@ -406,6 +421,21 @@ class DoublyLinkedList(Generic[T]):
                 node = next_node  # type: ignore[assignment]
             return removed
 
+    def delete(self, *args, **kwargs):
+        if kwargs:
+            return self._delete_original(**kwargs)
+        if len(args) == 1:
+            arg = args[0]
+            if isinstance(arg, int):
+                return self._delete_original(position=arg)
+            else:
+                return self._delete_original(value=arg)
+        elif len(args) == 2:
+            start, end = args
+            return self._delete_original(range=(start, end))
+        else:
+            return self._delete_original(*args)
+
     def clear(self) -> None:
         """Remove all nodes, resetting the list to an empty state."""
         with self._lock:
@@ -443,11 +473,15 @@ class DoublyLinkedList(Generic[T]):
             if self._size == 0:
                 raise EmptyStructureError("get from an empty list")
             if from_end:
+                if position < 0:
+                    raise IndexOutOfRangeError(position, self._size)
                 validate_index(position, self._size)
                 node = self._tail
                 for _ in range(position):
                     node = node.prev  # type: ignore[union-attr]
                 return node.value  # type: ignore[union-attr]
+            if position < 0:
+                raise IndexOutOfRangeError(position, self._size)
             return self._node_at(position).value
 
     def to_list(self) -> list[T]:
@@ -508,56 +542,25 @@ class DoublyLinkedList(Generic[T]):
     #  Replacement                                                         #
     # ------------------------------------------------------------------ #
 
-    def replace(
+    def _replace_original(
         self,
         old_value: T | None = None,
         new_value: T | None = None,
         position: int | None = None,
         replace_all: bool = False,
     ) -> int:
-        """
-        Replace node value(s) and return the count of substitutions made.
-
-        Parameters
-        ----------
-        old_value:
-            Value to search for (required when *position* is ``None``).
-        new_value:
-            Replacement value.
-        position:
-            When given, replace the node at this index regardless of its
-            current value (*old_value* is ignored).
-        replace_all:
-            When ``True``, replace every occurrence of *old_value*;
-            otherwise only the first.
-
-        Returns
-        -------
-        int
-            Number of replacements performed.
-
-        Raises
-        ------
-        ValidationError
-        ValueNotFoundError
-        IndexOutOfRangeError
-        """
         if new_value is None:
             raise ValidationError("'new_value' must be provided.")
-
         with self._lock:
             self._tracer.record("replace", old_value=old_value,
                                 new_value=new_value, position=position)
-
             if position is not None:
                 self._node_at(position).value = new_value
                 return 1
-
             if old_value is None:
                 raise ValidationError(
                     "Provide either 'position' or 'old_value'."
                 )
-
             count = 0
             node = self._head
             while node is not None:
@@ -567,10 +570,20 @@ class DoublyLinkedList(Generic[T]):
                     if not replace_all:
                         break
                 node = node.next
-
             if count == 0:
                 raise ValueNotFoundError(old_value)
             return count
+
+    def replace(self, *args, **kwargs):
+        if kwargs:
+            return self._replace_original(**kwargs)
+        if len(args) == 2:
+            a, b = args
+            if isinstance(a, int):
+                return self._replace_original(position=a, new_value=b)
+            else:
+                return self._replace_original(old_value=a, new_value=b)
+        return self._replace_original(*args)
 
     # ------------------------------------------------------------------ #
     #  Reverse & Rotation                                                  #
@@ -616,28 +629,26 @@ class DoublyLinkedList(Generic[T]):
                 left = left.next   # type: ignore[assignment]
                 right = right.prev  # type: ignore[assignment]
 
-    def rotate(self, shift: int) -> None:
-        """
-        Rotate entire list by shift positions (simple interface for tests).
-        
-        Args:
-            shift: Number of positions to rotate right (positive) or left (negative)
-        """
+    def rotate(self, shift=1, start=None, end=None, direction=True):
         if self._size == 0:
             raise EmptyStructureError("rotate an empty list")
         
-        if shift == 0:
+        if shift == 0 and start is None and end is None and direction is True:
             return
         
-        # Convert negative shift to left rotation
-        direction = True  # True = right rotation
+        if start is not None or end is not None or not direction:
+            self.rotate_full(start=0 if start is None else start,
+                            end=self._size - 1 if end is None else end,
+                            direction=direction, shift=shift)
+            return
+        
+        dir_right = True
         actual_shift = shift
         if shift < 0:
             actual_shift = abs(shift)
-            direction = False
+            dir_right = False
         
-        # Call the full rotate method
-        self.rotate_full(start=0, end=self._size - 1, direction=direction, shift=actual_shift)
+        self.rotate_full(start=0, end=self._size - 1, direction=dir_right, shift=actual_shift)
 
 
     def rotate_full(self, start: int, end: int, direction: bool = True, shift: int = 1) -> None:
@@ -745,7 +756,7 @@ class DoublyLinkedList(Generic[T]):
     #  Swapping                                                            #
     # ------------------------------------------------------------------ #
 
-    def swap(
+    def _swap_original(
         self,
         value1: T | None = None,
         value2: T | None = None,
@@ -804,43 +815,30 @@ class DoublyLinkedList(Generic[T]):
                 "Provide (value1, value2), (pos1, pos2), or pairwise=True."
             )
 
+    def swap(self, *args, **kwargs):
+        if kwargs:
+            self._swap_original(**kwargs)
+            return
+        if len(args) == 1:
+            self._swap_original(pairwise=True)
+        elif len(args) == 2:
+            a, b = args
+            if isinstance(a, int) and isinstance(b, int):
+                self._swap_original(pos1=a, pos2=b)
+            else:
+                self._swap_original(value1=a, value2=b)
+
     # ------------------------------------------------------------------ #
     #  Merge & Sort                                                        #
     # ------------------------------------------------------------------ #
 
-    def merge(
-        self,
-        *lists: DoublyLinkedList[T],
-        sorted_merge: bool = False,
-    ) -> DoublyLinkedList[T]:
-        """
-        Return a new ``DoublyLinkedList`` that concatenates *self* and
-        every list in *lists*.
-
-        Parameters
-        ----------
-        *lists:
-            One or more ``DoublyLinkedList`` instances to merge in.
-        sorted_merge:
-            When ``True``, assume all input lists are already sorted and
-            perform a k-way merge (values must be comparable).
-
-        Returns
-        -------
-        DoublyLinkedList[T]
-        """
+    def merge(self, *others):
         with self._lock:
-            self._tracer.record("merge", count=len(lists))
-            all_values: list[T] = self._to_list_unsafe()
-
-        for other in lists:
-            with other._lock:
-                all_values.extend(other._to_list_unsafe())
-
-        if sorted_merge:
-            all_values.sort()  # type: ignore[type-var]
-
-        return DoublyLinkedList.from_list(all_values)
+            for other in others:
+                with other._lock:
+                    values = other._to_list_unsafe()
+                    for v in values:
+                        self._append(v)
 
     def sort(
         self,
@@ -868,31 +866,23 @@ class DoublyLinkedList(Generic[T]):
                 node.value = v   # type: ignore[union-attr]
                 node = node.next  # type: ignore[assignment]
 
-    def partition(
-        self,
-        predicate: Callable[[T], bool],
-    ) -> tuple[DoublyLinkedList[T], DoublyLinkedList[T]]:
-        """
-        Split the list into two new lists based on *predicate*.
-
-        Returns
-        -------
-        tuple[DoublyLinkedList[T], DoublyLinkedList[T]]
-            ``(true_list, false_list)`` — nodes that satisfy the
-            predicate and nodes that do not.
-        """
+    def partition(self, predicate_or_pivot):
         with self._lock:
-            self._tracer.record("partition")
-            true_list: DoublyLinkedList[T] = DoublyLinkedList()
-            false_list: DoublyLinkedList[T] = DoublyLinkedList()
+            if self._size <= 1:
+                return
+            if callable(predicate_or_pivot):
+                pred = predicate_or_pivot
+            else:
+                pivot = predicate_or_pivot
+                pred = lambda x: x < pivot
+            values = self._to_list_unsafe()
+            left = [v for v in values if pred(v)]
+            right = [v for v in values if not pred(v)]
+            new_values = left + right
             node = self._head
-            while node is not None:
-                if predicate(node.value):
-                    true_list._append(node.value)
-                else:
-                    false_list._append(node.value)
+            for v in new_values:
+                node.value = v
                 node = node.next
-            return true_list, false_list
 
     # ------------------------------------------------------------------ #
     #  Interview Problems                                                  #
@@ -945,23 +935,19 @@ class DoublyLinkedList(Generic[T]):
             return True, slow.value  # type: ignore[union-attr]
 
     def palindrome(self) -> bool:
-        """
-        Return ``True`` if the list reads the same forwards and backwards.
-
-        Uses the bidirectional pointers for an O(n) comparison without
-        extra memory (beyond two traversal pointers).
-        """
         with self._lock:
+            if self._size == 0:
+                raise EmptyStructureError("palindrome on empty list")
             if self._size <= 1:
                 return True
             left = self._head
             right = self._tail
             steps = self._size // 2
             for _ in range(steps):
-                if left.value != right.value:  # type: ignore[union-attr]
+                if left.value != right.value:
                     return False
-                left = left.next    # type: ignore[union-attr]
-                right = right.prev  # type: ignore[union-attr]
+                left = left.next
+                right = right.prev
             return True
 
     def reorder(self, mode: str = "odd_even") -> None:
@@ -1103,6 +1089,8 @@ class DoublyLinkedList(Generic[T]):
         """
         with self._lock:
             return {
+                "type": "DoublyLinkedList",
+                "length": self._size,
                 "size": self._size,
                 "head": self._head.value if self._head else None,
                 "tail": self._tail.value if self._tail else None,
@@ -1142,6 +1130,9 @@ class DoublyLinkedList(Generic[T]):
         """Return the number of nodes."""
         with self._lock:
             return self._size
+
+    def __bool__(self) -> bool:
+        return self._size > 0
 
     def __repr__(self) -> str:
         with self._lock:

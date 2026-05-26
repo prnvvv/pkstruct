@@ -144,11 +144,19 @@ class SinglyLinkedList(Generic[T]):
             return None
         return self._node_at(index - 1)
 
+    def _to_list_unsafe(self) -> list[T]:
+        result = []
+        node = self._head
+        while node:
+            result.append(node.value)
+            node = node.next
+        return result
+
     # ------------------------------------------------------------------ #
     # Insertion                                                            #
     # ------------------------------------------------------------------ #
 
-    def insert(
+    def _insert_original(
         self,
         value: T,
         position: int | None = None,
@@ -191,8 +199,9 @@ class SinglyLinkedList(Generic[T]):
                 # default: append at tail
                 self._append(value)
                 return
-            # normalise negative index; allow == size for append-at-end
-            normalised = position if position >= 0 else position + self._size
+            if position < 0:
+                raise IndexOutOfRangeError(position, self._size)
+            normalised = position
             if not (0 <= normalised <= self._size):
                 raise IndexOutOfRangeError(position, self._size)
 
@@ -205,6 +214,22 @@ class SinglyLinkedList(Generic[T]):
                 node.next = prev.next
                 prev.next = node
             self._size += 1
+
+    def insert(self, *args, **kwargs):
+        if kwargs:
+            if len(args) == 1:
+                kwargs.setdefault('value', args[0])
+            elif len(args) == 2:
+                kwargs.setdefault('position', args[0])
+                kwargs.setdefault('value', args[1])
+            self._insert_original(**kwargs)
+        elif len(args) == 1:
+            self._insert_original(value=args[0])
+        elif len(args) == 2 and isinstance(args[0], int):
+            pos, val = args
+            self._insert_original(value=val, position=pos)
+        else:
+            self._insert_original(*args)
 
     def _insert_before_value(self, value: T, target: T) -> None:
         prev: SinglyNode[T] | None = None
@@ -260,7 +285,7 @@ class SinglyLinkedList(Generic[T]):
     # Deletion                                                             #
     # ------------------------------------------------------------------ #
 
-    def delete(
+    def _delete_original(
         self,
         value: T | None = None,
         position: int | None = None,
@@ -344,6 +369,21 @@ class SinglyLinkedList(Generic[T]):
             removed.append(self._delete_by_position(ns))
         return removed
 
+    def delete(self, *args, **kwargs):
+        if kwargs:
+            return self._delete_original(**kwargs)
+        if len(args) == 1:
+            arg = args[0]
+            if isinstance(arg, int):
+                return self._delete_original(position=arg)
+            else:
+                return self._delete_original(value=arg)
+        elif len(args) == 2:
+            start, end = args
+            return self._delete_original(range=(start, end))
+        else:
+            return self._delete_original(*args)
+
     def clear(self) -> None:
         """Remove all elements from the list."""
         with self._lock:
@@ -375,7 +415,9 @@ class SinglyLinkedList(Generic[T]):
             if from_end:
                 idx = self._size - 1 - position
             else:
-                idx = position if position >= 0 else position + self._size
+                if position < 0:
+                    raise IndexOutOfRangeError(position, self._size)
+                idx = position
             if not (0 <= idx < self._size):
                 raise IndexOutOfRangeError(position, self._size)
             return self._node_at(idx).value
@@ -435,33 +477,13 @@ class SinglyLinkedList(Generic[T]):
     # Replacement                                                          #
     # ------------------------------------------------------------------ #
 
-    def replace(
+    def _replace_original(
         self,
         old_value: T | None = None,
         new_value: T | None = None,
         position: int | None = None,
         replace_all: bool = False,
     ) -> int:
-        """Replace value(s) in-place.
-
-        Supply *old_value* + *new_value* to replace by value, or *position* +
-        *new_value* to replace at a specific index.
-
-        Args:
-            old_value:   Value to search for and replace.
-            new_value:   Replacement value.
-            position:    If given, replaces the element at this position.
-            replace_all: If True and using value replacement, replace every
-                         occurrence.  Defaults to replacing only the first.
-
-        Returns:
-            Number of replacements made.
-
-        Raises:
-            ValidationError:      On invalid argument combinations.
-            IndexOutOfRangeError: If *position* is out of range.
-            ValueNotFoundError:   If *old_value* is not found (value mode).
-        """
         if new_value is None:
             raise ValidationError("'new_value' is required.")
         with self._lock:
@@ -485,20 +507,25 @@ class SinglyLinkedList(Generic[T]):
                 raise ValueNotFoundError(old_value)
             return count
 
+    def replace(self, *args, **kwargs):
+        if kwargs:
+            return self._replace_original(**kwargs)
+        if len(args) == 2:
+            a, b = args
+            if isinstance(a, int):
+                return self._replace_original(position=a, new_value=b)
+            else:
+                return self._replace_original(old_value=a, new_value=b)
+        return self._replace_original(*args)
+
     # ------------------------------------------------------------------ #
     # Reverse & Rotation                                                   #
     # ------------------------------------------------------------------ #
 
     def reverse(self, start: int | None = None, end: int | None = None) -> None:
-        """Reverse the list (or a sub-range) in place.
-
-        Args:
-            start: Inclusive start index (default: 0).
-            end:   Inclusive end index (default: size - 1).
-        """
         with self._lock:
-            if self._size <= 1:
-                return
+            if self._size == 0:
+                raise EmptyStructureError("reverse an empty list")
             s = 0 if start is None else (start if start >= 0 else start + self._size)
             e = self._size - 1 if end is None else (end if end >= 0 else end + self._size)
             if s >= e:
@@ -702,7 +729,7 @@ class SinglyLinkedList(Generic[T]):
     # Swapping                                                             #
     # ------------------------------------------------------------------ #
 
-    def swap(
+    def _swap_original(
         self,
         value1: T | None = None,
         value2: T | None = None,
@@ -745,6 +772,19 @@ class SinglyLinkedList(Generic[T]):
                 "Provide (value1, value2), (pos1, pos2), or pairwise=True."
             )
 
+    def swap(self, *args, **kwargs):
+        if kwargs:
+            self._swap_original(**kwargs)
+            return
+        if len(args) == 1:
+            self._swap_original(pairwise=True)
+        elif len(args) == 2:
+            a, b = args
+            if isinstance(a, int) and isinstance(b, int):
+                self._swap_original(pos1=a, pos2=b)
+            else:
+                self._swap_original(value1=a, value2=b)
+
     def _pairwise_swap(self) -> None:
         cur = self._head
         while cur is not None and cur.next is not None:
@@ -755,27 +795,13 @@ class SinglyLinkedList(Generic[T]):
     # Merge & Sort                                                         #
     # ------------------------------------------------------------------ #
 
-    def merge(
-        self, *lists: "SinglyLinkedList[T]", sorted_merge: bool = False
-    ) -> "SinglyLinkedList[T]":
-        """Merge this list with one or more other lists.
-
-        Args:
-            *lists:       Other SinglyLinkedLists to merge in.
-            sorted_merge: If True, the result is sorted (all inputs must be
-                          pre-sorted for a correct merge-sort).
-
-        Returns:
-            A new SinglyLinkedList containing all elements.
-        """
+    def merge(self, *others):
         with self._lock:
-            combined: list[T] = self.to_list()
-            for lst in lists:
-                combined.extend(lst.to_list())
-        result: SinglyLinkedList[T] = SinglyLinkedList.from_list(combined)
-        if sorted_merge:
-            result.sort()
-        return result
+            for other in others:
+                with other._lock:
+                    values = other._to_list_unsafe()
+                    for v in values:
+                        self._append(v)
 
     def sort(
         self,
@@ -847,32 +873,23 @@ class SinglyLinkedList(Generic[T]):
         cur.next = left if left is not None else right
         return dummy.next
 
-    def partition(
-        self, predicate: Callable[[T], bool]
-    ) -> "tuple[SinglyLinkedList[T], SinglyLinkedList[T]]":
-        """Split into two lists based on *predicate*.
-
-        Args:
-            predicate: Callable that returns True / False for each element.
-
-        Returns:
-            ``(true_list, false_list)`` — elements for which predicate holds,
-            and those for which it does not.
-        """
+    def partition(self, predicate_or_pivot):
         with self._lock:
-            true_items: list[T] = []
-            false_items: list[T] = []
-            cur = self._head
-            while cur is not None:
-                if predicate(cur.value):
-                    true_items.append(cur.value)
-                else:
-                    false_items.append(cur.value)
-                cur = cur.next
-        return (
-            SinglyLinkedList.from_list(true_items),
-            SinglyLinkedList.from_list(false_items),
-        )
+            if self._size <= 1:
+                return
+            if callable(predicate_or_pivot):
+                pred = predicate_or_pivot
+            else:
+                pivot = predicate_or_pivot
+                pred = lambda x: x < pivot
+            values = self._to_list_unsafe()
+            left = [v for v in values if pred(v)]
+            right = [v for v in values if not pred(v)]
+            new_values = left + right
+            node = self._head
+            for v in new_values:
+                node.value = v
+                node = node.next
 
     # ------------------------------------------------------------------ #
     # Interview problems                                                   #
@@ -941,8 +958,9 @@ class SinglyLinkedList(Generic[T]):
             return cur_a.value if cur_a is not None else None
 
     def palindrome(self) -> bool:
-        """Return True if the list reads the same forwards and backwards."""
         with self._lock:
+            if self._size == 0:
+                raise EmptyStructureError("palindrome on empty list")
             values: list[T] = []
             cur = self._head
             while cur is not None:
@@ -1078,6 +1096,7 @@ class SinglyLinkedList(Generic[T]):
         with self._lock:
             return {
                 "type": "SinglyLinkedList",
+                "length": self._size,
                 "size": self._size,
                 "head": repr(self._head),
                 "tail": repr(self._node_at(self._size - 1)) if self._size > 0 else None,
@@ -1115,6 +1134,9 @@ class SinglyLinkedList(Generic[T]):
 
     def __len__(self) -> int:
         return self.size()
+
+    def __bool__(self) -> bool:
+        return self._size > 0
 
     def __repr__(self) -> str:
         return f"SinglyLinkedList({self.to_list()!r})"
