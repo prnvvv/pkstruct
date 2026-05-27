@@ -6,16 +6,19 @@ Run: python run_all_tests.py
 
 import sys
 import os
+
 # Add src/ directory so 'import pkstruct' resolves the package
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 import time
 import tracemalloc
+
 
 def print_section(title, char="="):
     print(f"\n{char * 70}")
     print(f"{title:^70}")
     print(f"{char * 70}\n")
+
 
 class TestRunner:
     def __init__(self):
@@ -32,11 +35,12 @@ class TestRunner:
             tracemalloc.stop()
             elapsed = time.perf_counter() - start
 
-            print(f"PASSED ({elapsed*1000:.2f}ms, {peak/1024:.1f}KB peak)")
+            print(f"PASSED ({elapsed * 1000:.2f}ms, {peak / 1024:.1f}KB peak)")
             self.results.append((name, True, elapsed, peak))
             return result
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             print(f"FAILED: {e}")
             self.failures.append((name, e))
@@ -60,7 +64,7 @@ class TestRunner:
         if self.results:
             avg_time = sum(t for _, _, t, _ in self.results) / len(self.results)
             max_mem = max(p for _, _, _, p in self.results)
-            print(f"\nPerformance: {avg_time*1000:.2f}ms avg | {max_mem/1024:.1f}KB peak")
+            print(f"\nPerformance: {avg_time * 1000:.2f}ms avg | {max_mem / 1024:.1f}KB peak")
 
 
 def comprehensive_tests():
@@ -68,8 +72,10 @@ def comprehensive_tests():
     from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
     from pkstruct.linear.linked_lists.circular_linked_list import CircularLinkedList
     from pkstruct.linear.exceptions import (
-        EmptyStructureError, IndexOutOfRangeError,
-        ValueNotFoundError, ValidationError
+        EmptyStructureError,
+        IndexOutOfRangeError,
+        ValueNotFoundError,
+        ValidationError,
     )
 
     runner = TestRunner()
@@ -116,7 +122,7 @@ def comprehensive_tests():
         sll.delete(value=4)
         assert sll.to_list() == [1, 2, 5]
 
-        sll.delete(range=(0, 1))
+        sll.delete(rng=(0, 1))
         assert sll.to_list() == [5]
 
         sll.clear()
@@ -337,8 +343,8 @@ def comprehensive_tests():
         result2 = lst.copy()
         copy_time = time.perf_counter() - start
 
-        print(f"  SLL traversal 100k: {list_time*1000:.2f}ms")
-        print(f"  List copy 100k: {copy_time*1000:.2f}ms")
+        print(f"  SLL traversal 100k: {list_time * 1000:.2f}ms")
+        print(f"  List copy 100k: {copy_time * 1000:.2f}ms")
         return True
 
     runner.run_test("Traversal Performance", test_traversal_performance)
@@ -363,7 +369,7 @@ def comprehensive_tests():
         r_node = RegularNode(10)
         r_size = sys.getsizeof(r_node) + sys.getsizeof(r_node.__dict__)
         print(f"  Regular node (no __slots__): ~{r_size} bytes")
-        print(f"  Memory saved: {(1 - s_size/r_size)*100:.1f}%")
+        print(f"  Memory saved: {(1 - s_size / r_size) * 100:.1f}%")
 
         assert s_size < r_size
         return True
@@ -421,9 +427,7 @@ def comprehensive_tests():
     def showcase_real_world_use():
         print("\n  Real-world examples:\n")
 
-        playlist = CircularLinkedList.from_list([
-            "Song A", "Song B", "Song C", "Song D"
-        ])
+        playlist = CircularLinkedList.from_list(["Song A", "Song B", "Song C", "Song D"])
         print(f"    Playlist: {' -> '.join(playlist.to_list())} -> (back to head)")
 
         history = SinglyLinkedList()
@@ -442,9 +446,9 @@ def comprehensive_tests():
 
 
 if __name__ == "__main__":
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("PKSTRUCT.LINEAR COMPREHENSIVE TEST SUITE")
-    print("="*70)
+    print("=" * 70)
 
     runner = comprehensive_tests()
     runner.summary()

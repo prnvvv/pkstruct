@@ -73,7 +73,7 @@ ll.insert(99, after=50)                # insert after value
 # Deletion
 ll.delete(position=2)                  # delete by index
 ll.delete(value=42)                    # delete by value (first match)
-ll.delete(range=(1, 3))                # delete sub-range [1..3]
+ll.delete(rng=(1, 3))                 # delete sub-range [1..3]
 ll.clear()                             # remove all
 
 # Access

@@ -14,6 +14,7 @@ Structural invariant
 All mutating operations acquire ``self._lock`` (a ``StructureLock``).
 Debug events are recorded via ``DebugTracer``.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
@@ -132,9 +133,9 @@ class CircularLinkedList(Generic[T]):
             self._head = new_node
             self._tail = new_node
         else:
-            new_node.next = self._head          # close the ring
-            self._tail.next = new_node          # old tail → new node
-            self._tail = new_node               # advance tail
+            new_node.next = self._head  # close the ring
+            self._tail.next = new_node  # old tail → new node
+            self._tail = new_node  # advance tail
         self._size += 1
 
     def _prepend(self, value: T) -> None:
@@ -168,7 +169,7 @@ class CircularLinkedList(Generic[T]):
         """Return the node immediately preceding *target* in the ring."""
         node = self._tail
         while node.next is not target:  # type: ignore[union-attr]
-            node = node.next            # type: ignore[union-attr]
+            node = node.next  # type: ignore[union-attr]
         return node  # type: ignore[return-value]
 
     def _find_node(self, value: object) -> CircularNode[T] | None:
@@ -258,13 +259,12 @@ class CircularLinkedList(Generic[T]):
         """
         provided = sum(x is not None for x in (position, before, after))
         if provided > 1:
-            raise ValidationError(
-                "Provide at most one of 'position', 'before', or 'after'."
-            )
+            raise ValidationError("Provide at most one of 'position', 'before', or 'after'.")
 
         with self._lock:
-            self._tracer.record("insert", value=value, position=position,
-                                before=before, after=after)
+            self._tracer.record(
+                "insert", value=value, position=position, before=before, after=after
+            )
 
             # --- before / after shortcuts ---
             if before is not None:
@@ -323,10 +323,10 @@ class CircularLinkedList(Generic[T]):
     def insert(self, *args, **kwargs):
         if kwargs:
             if len(args) == 1:
-                kwargs.setdefault('value', args[0])
+                kwargs.setdefault("value", args[0])
             elif len(args) == 2:
-                kwargs.setdefault('position', args[0])
-                kwargs.setdefault('value', args[1])
+                kwargs.setdefault("position", args[0])
+                kwargs.setdefault("value", args[1])
             self._insert_original(**kwargs)
         elif len(args) == 1:
             self._insert_original(value=args[0])
@@ -348,9 +348,7 @@ class CircularLinkedList(Generic[T]):
         with self._lock:
             self._tracer.record("extend")
             items: list[T] = (
-                values._to_list_unsafe()
-                if isinstance(values, CircularLinkedList)
-                else list(values)
+                values._to_list_unsafe() if isinstance(values, CircularLinkedList) else list(values)
             )
             for item in items:
                 self._append(item)
@@ -363,12 +361,12 @@ class CircularLinkedList(Generic[T]):
         self,
         value: T | None = None,
         position: int | None = None,
-        range: tuple[int, int] | None = None,
+        rng: tuple[int, int] | None = None,
     ) -> T | list[T] | None:
         """
         Remove and return node(s) from the ring.
 
-        Provide **exactly one** of *value*, *position*, or *range*.
+        Provide **exactly one** of *value*, *position*, or *rng*.
 
         Parameters
         ----------
@@ -376,7 +374,7 @@ class CircularLinkedList(Generic[T]):
             Remove the first node whose value equals this.
         position:
             Remove the node at this zero-based index.
-        range:
+        rng:
             ``(start, end)`` inclusive index range.  Returns a list.
 
         Returns
@@ -384,29 +382,24 @@ class CircularLinkedList(Generic[T]):
         T
             When *value* or *position* is used.
         list[T]
-            When *range* is used.
+            When *rng* is used.
 
         Raises
         ------
         EmptyStructureError, ValueNotFoundError,
         IndexOutOfRangeError, InvalidRangeError, ValidationError
         """
-        provided = sum(x is not None for x in (value, position, range))
+        provided = sum(x is not None for x in (value, position, rng))
         if provided == 0:
-            raise ValidationError(
-                "Provide one of 'value', 'position', or 'range'."
-            )
+            raise ValidationError("Provide one of 'value', 'position', or 'range'.")
         if provided > 1:
-            raise ValidationError(
-                "Provide only one of 'value', 'position', or 'range'."
-            )
+            raise ValidationError("Provide only one of 'value', 'position', or 'range'.")
 
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("delete from an empty list")
 
-            self._tracer.record("delete", value=value, position=position,
-                                range=range)
+            self._tracer.record("delete", value=value, position=position, rng=rng)
 
             if value is not None:
                 node = self._find_node(value)
@@ -419,7 +412,7 @@ class CircularLinkedList(Generic[T]):
                 return self._remove_node(node)
 
             # range deletion
-            start, end = range  # type: ignore[misc]
+            start, end = rng
             validate_range(start, end, self._size)
             removed: list[T] = []
             # collect nodes first to avoid pointer confusion during removal
@@ -443,7 +436,7 @@ class CircularLinkedList(Generic[T]):
                 return self._delete_original(value=arg)
         elif len(args) == 2:
             start, end = args
-            return self._delete_original(range=(start, end))
+            return self._delete_original(rng=(start, end))
         else:
             return self._delete_original(*args)
 
@@ -532,7 +525,7 @@ class CircularLinkedList(Generic[T]):
             for i in range(self._size):
                 if node.value == value:  # type: ignore[union-attr]
                     return i
-                node = node.next         # type: ignore[union-attr]
+                node = node.next  # type: ignore[union-attr]
             raise ValueNotFoundError(value)
 
     # ------------------------------------------------------------------ #
@@ -549,24 +542,23 @@ class CircularLinkedList(Generic[T]):
         if new_value is None:
             raise ValidationError("'new_value' must be provided.")
         with self._lock:
-            self._tracer.record("replace", old_value=old_value,
-                                new_value=new_value, position=position)
+            self._tracer.record(
+                "replace", old_value=old_value, new_value=new_value, position=position
+            )
             if position is not None:
                 self._node_at(position).value = new_value
                 return 1
             if old_value is None:
-                raise ValidationError(
-                    "Provide either 'position' or 'old_value'."
-                )
+                raise ValidationError("Provide either 'position' or 'old_value'.")
             count = 0
             node = self._head
             for _ in range(self._size):
                 if node.value == old_value:  # type: ignore[union-attr]
-                    node.value = new_value    # type: ignore[union-attr]
+                    node.value = new_value  # type: ignore[union-attr]
                     count += 1
                     if not replace_all:
                         break
-                node = node.next             # type: ignore[union-attr]
+                node = node.next  # type: ignore[union-attr]
             if count == 0:
                 raise ValueNotFoundError(old_value)
             return count
@@ -637,11 +629,10 @@ class CircularLinkedList(Generic[T]):
                 left += 1
                 right -= 1
 
-
     def rotate_full(self, start: int, end: int, direction: bool = True, shift: int = 1) -> None:
         """
         Rotate a sub-range of the list (full interface).
-        
+
         Args:
             start: Inclusive start index
             end: Inclusive end index
@@ -651,44 +642,46 @@ class CircularLinkedList(Generic[T]):
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate an empty list")
-            
+
             # Normalize indices
             if start < 0:
                 start = self._size + start
             if end < 0:
                 end = self._size + end
-            
+
             validate_range(start, end, self._size)
-            
+
             length = end - start + 1
             if length <= 1:
                 return
-            
+
             effective_shift = shift % length
             if effective_shift == 0:
                 return
-            
+
             if not direction:
                 effective_shift = length - effective_shift
-            
-            self._tracer.record("rotate", start=start, end=end, 
-                                direction=direction, shift=effective_shift)
-            
+
+            self._tracer.record(
+                "rotate", start=start, end=end, direction=direction, shift=effective_shift
+            )
+
             # Get values in range
             values = []
             node = self._node_at(start)
             for _ in range(length):
                 values.append(node.value)
                 node = node.next  # type: ignore[union-attr]
-            
+
             # Rotate values
             rotated = values[-effective_shift:] + values[:-effective_shift]
-            
+
             # Write back
             node = self._node_at(start)
             for v in rotated:
                 node.value = v
                 node = node.next  # type: ignore[union-attr]
+
     def rotate(
         self,
         shift: int = 1,
@@ -698,22 +691,22 @@ class CircularLinkedList(Generic[T]):
     ) -> None:
         """
         Rotate the list or a sub-range by `shift` positions.
-        
+
         This method supports two calling patterns:
-        
+
         1. Simple rotation (entire list):
             >>> ll.rotate(2)  # Rotate entire list right by 2
             >>> ll.rotate(-2) # Rotate entire list left by 2
-        
+
         2. Advanced rotation (sub-range):
             >>> ll.rotate(shift=2, start=1, end=5, direction=True)  # Rotate right by 2
-        
+
         Args:
             shift: Number of positions to rotate. Positive = right, negative = left.
             start: Inclusive start index (None = 0, entire list start)
             end: Inclusive end index (None = size-1, entire list end)
             direction: True = rotate right, False = rotate left (ignored if shift negative)
-        
+
         Raises:
             EmptyStructureError: If list is empty
             InvalidRangeError: If start/end indices are invalid
@@ -721,48 +714,52 @@ class CircularLinkedList(Generic[T]):
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate an empty list")
-            
+
             # Handle negative shift as left rotation
             actual_shift = shift
             if shift < 0:
                 actual_shift = abs(shift)
                 direction = False
-            
+
             # Set default range to entire list
             actual_start = 0 if start is None else start
             actual_end = self._size - 1 if end is None else end
-            
+
             # Normalize negative indices
             if actual_start < 0:
                 actual_start = self._size + actual_start
             if actual_end < 0:
                 actual_end = self._size + actual_end
-            
+
             # Validate range
             validate_range(actual_start, actual_end, self._size)
-            
+
             length = actual_end - actual_start + 1
             if length <= 1:
                 return
-            
+
             # Calculate effective shift
             effective_shift = actual_shift % length
             if effective_shift == 0:
                 return
-            
+
             # Convert left rotation to right rotation
             if not direction:
                 effective_shift = length - effective_shift
-            
-            self._tracer.record("rotate", shift=actual_shift, start=actual_start, 
-                                end=actual_end, direction=direction)
-            
+
+            self._tracer.record(
+                "rotate",
+                shift=actual_shift,
+                start=actual_start,
+                end=actual_end,
+                direction=direction,
+            )
+
             # For full list rotation, we can use a more efficient approach
             if actual_start == 0 and actual_end == self._size - 1:
                 self._rotate_full_list(effective_shift)
             else:
                 self._rotate_subrange(actual_start, actual_end, effective_shift)
-
 
     def _rotate_full_list(self, shift: int) -> None:
         if shift == 0 or self._size <= 1:
@@ -771,7 +768,6 @@ class CircularLinkedList(Generic[T]):
         for _ in range(steps):
             self._head = self._head.next
             self._tail = self._tail.next
-
 
     def _rotate_subrange(self, start: int, end: int, shift: int) -> None:
         """
@@ -784,11 +780,11 @@ class CircularLinkedList(Generic[T]):
         for _ in range(end - start + 1):
             nodes.append(node)
             node = node.next  # type: ignore[union-attr]
-        
+
         # Get values and rotate
         values = [n.value for n in nodes]
         rotated = values[-shift:] + values[:-shift]
-        
+
         # Write back rotated values
         for n, v in zip(nodes, rotated):
             n.value = v
@@ -824,8 +820,7 @@ class CircularLinkedList(Generic[T]):
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate_head on an empty list")
-            self._tracer.record("rotate_head", steps=steps,
-                                direction=direction)
+            self._tracer.record("rotate_head", steps=steps, direction=direction)
 
             steps = steps % self._size
             if steps == 0:
@@ -835,8 +830,8 @@ class CircularLinkedList(Generic[T]):
                 steps = self._size - steps
 
             for _ in range(steps):
-                self._tail = self._head         # type: ignore[assignment]
-                self._head = self._head.next    # type: ignore[union-attr]
+                self._tail = self._head  # type: ignore[assignment]
+                self._head = self._head.next  # type: ignore[union-attr]
 
     # ------------------------------------------------------------------ #
     #  Swapping                                                            #
@@ -869,17 +864,18 @@ class CircularLinkedList(Generic[T]):
             if self._size == 0:
                 raise EmptyStructureError("swap in an empty list")
 
-            self._tracer.record("swap", value1=value1, value2=value2,
-                                pos1=pos1, pos2=pos2, pairwise=pairwise)
+            self._tracer.record(
+                "swap", value1=value1, value2=value2, pos1=pos1, pos2=pos2, pairwise=pairwise
+            )
 
             if pairwise:
                 node = self._head
                 for _ in range(self._size // 2):
                     node.value, node.next.value = (  # type: ignore[union-attr]
-                        node.next.value,             # type: ignore[union-attr]
+                        node.next.value,  # type: ignore[union-attr]
                         node.value,
                     )
-                    node = node.next.next            # type: ignore[union-attr]
+                    node = node.next.next  # type: ignore[union-attr]
                 return
 
             if value1 is not None and value2 is not None:
@@ -898,9 +894,7 @@ class CircularLinkedList(Generic[T]):
                 n1.value, n2.value = n2.value, n1.value
                 return
 
-            raise ValidationError(
-                "Provide (value1, value2), (pos1, pos2), or pairwise=True."
-            )
+            raise ValidationError("Provide (value1, value2), (pos1, pos2), or pairwise=True.")
 
     def swap(self, *args, **kwargs):
         if kwargs:
@@ -951,7 +945,7 @@ class CircularLinkedList(Generic[T]):
             values.sort(key=key, reverse=reverse)  # type: ignore[type-var]
             node = self._head
             for v in values:
-                node.value = v    # type: ignore[union-attr]
+                node.value = v  # type: ignore[union-attr]
                 node = node.next  # type: ignore[assignment]
 
     def partition(self, predicate_or_pivot):
@@ -976,9 +970,7 @@ class CircularLinkedList(Generic[T]):
     #  Interview Problems                                                  #
     # ------------------------------------------------------------------ #
 
-    def detect_cycle(
-        self, return_start: bool = False
-    ) -> bool | tuple[bool, Any]:
+    def detect_cycle(self, return_start: bool = False) -> bool | tuple[bool, Any]:
         """
         Verify that the circular invariant holds and, optionally, return
         the entry node value.
@@ -1009,8 +1001,8 @@ class CircularLinkedList(Generic[T]):
             for _ in range(max_steps):
                 if fast.next is None or fast.next.next is None:
                     break
-                slow = slow.next          # type: ignore[union-attr]
-                fast = fast.next.next     # type: ignore[union-attr]
+                slow = slow.next  # type: ignore[union-attr]
+                fast = fast.next.next  # type: ignore[union-attr]
                 if slow is fast:
                     has_cycle = True
                     break
@@ -1062,30 +1054,28 @@ class CircularLinkedList(Generic[T]):
                 reordered = odd_vals + even_vals
                 node = self._head
                 for v in reordered:
-                    node.value = v    # type: ignore[union-attr]
+                    node.value = v  # type: ignore[union-attr]
                     node = node.next  # type: ignore[assignment]
             else:
-                raise ValidationError(
-                    f"Unknown reorder mode: '{mode}'. Supported: 'odd_even'."
-                )
+                raise ValidationError(f"Unknown reorder mode: '{mode}'. Supported: 'odd_even'.")
 
     def segregate_even_odd(self) -> None:
         """
         Move all even-valued elements before odd-valued elements.
-        
+
         Works only for integer-valued lists. Order within each group is
         preserved (stable). Non-integer values are treated as odd.
         """
         with self._lock:
             if self._size <= 1:
                 return
-            
+
             self._tracer.record("segregate_even_odd")
-            
+
             # Collect values in order - MUST use size bound, not None check
             evens: list[T] = []
             odds: list[T] = []
-            
+
             node = self._head
             for _ in range(self._size):  # KEY FIX: use size bound, not while node is not None
                 try:
@@ -1098,10 +1088,10 @@ class CircularLinkedList(Generic[T]):
                     # If can't check parity, treat as odd
                     odds.append(node.value)
                 node = node.next  # type: ignore[union-attr]
-            
+
             # Combine: evens first, then odds
             all_values = evens + odds
-            
+
             # Write back to list - also use size bound
             node = self._head
             for v in all_values:
@@ -1150,11 +1140,11 @@ class CircularLinkedList(Generic[T]):
                 # Advance step-1 more nodes
                 for _ in range(step - 1):
                     current = current.next  # type: ignore[union-attr]
-                next_node = current.next    # type: ignore[union-attr]
+                next_node = current.next  # type: ignore[union-attr]
                 self._remove_node(current)  # type: ignore[arg-type]
                 current = next_node
 
-            survivor = self._head.value     # type: ignore[union-attr]
+            survivor = self._head.value  # type: ignore[union-attr]
             self.clear()
             return survivor
 
@@ -1166,7 +1156,7 @@ class CircularLinkedList(Generic[T]):
         """Serialise the ring to a JSON string (head → tail order)."""
         with self._lock:
             return serialize_to_json(self._to_list_unsafe())
-    
+
     def serialize(self) -> str:
         """Alias for to_json() for test compatibility."""
         return self.to_json()
@@ -1228,24 +1218,22 @@ class CircularLinkedList(Generic[T]):
         """
         with self._lock:
             invariant = (
-                self._tail is not None
-                and self._tail.next is self._head
-            ) if self._size > 0 else True
+                (self._tail is not None and self._tail.next is self._head)
+                if self._size > 0
+                else True
+            )
             return {
                 "type": "CircularLinkedList",
                 "length": self._size,
                 "size": self._size,
                 "head": self._head.value if self._head else None,
                 "tail": self._tail.value if self._tail else None,
-                "tail_next": (
-                    self._tail.next.value
-                    if self._tail and self._tail.next
-                    else None
-                ),
+                "tail_next": (self._tail.next.value if self._tail and self._tail.next else None),
                 "invariant_ok": invariant,
                 "values": self._to_list_unsafe(),
                 "events": self._tracer.get_events(),
             }
+
     # ------------------------------------------------------------------ #
     #  Public properties for testing compatibility                        #
     # ------------------------------------------------------------------ #
@@ -1261,6 +1249,7 @@ class CircularLinkedList(Generic[T]):
         """Return the tail node (for testing compatibility)."""
         with self._lock:
             return self._tail
+
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #

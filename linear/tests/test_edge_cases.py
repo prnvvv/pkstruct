@@ -1,4 +1,5 @@
 """Edge case, stress, and concurrency tests for linked lists."""
+
 from __future__ import annotations
 
 import pytest
@@ -58,7 +59,7 @@ class TestEdgeCases:
     def test_invalid_range_raises(self, ListClass):
         lst = ListClass.from_list([1, 2, 3, 4, 5])
         with pytest.raises(InvalidRangeError):
-            lst.delete(range=(3, 1))
+            lst.delete(rng=(3, 1))
 
     def test_value_not_found_raises(self, ListClass):
         lst = ListClass.from_list([1, 2, 3])
@@ -176,6 +177,7 @@ class TestCircularLinkedListSpecific:
 class TestMemoryAndIntegrity:
     def test_memory_usage_returns_int(self, ListClass):
         from pkstruct.linear.utils.debug_tools import memory_usage
+
         lst = ListClass.from_list([1, 2, 3])
         mem = memory_usage(lst)
         assert isinstance(mem, int)
@@ -183,6 +185,7 @@ class TestMemoryAndIntegrity:
 
     def test_validate_integrity_passes(self, ListClass):
         from pkstruct.linear.utils.debug_tools import validate_integrity
+
         lst = ListClass.from_list([1, 2, 3])
         result = validate_integrity(lst)
         assert result["valid"] is True

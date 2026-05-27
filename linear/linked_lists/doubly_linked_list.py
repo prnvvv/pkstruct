@@ -4,6 +4,7 @@ pkstruct/linear/linked_lists/doubly_linked_list.py
 Thread-safe doubly linked list with bidirectional traversal,
 tail-pointer optimization, and full pkstruct ecosystem integration.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
@@ -259,13 +260,12 @@ class DoublyLinkedList(Generic[T]):
         """
         provided = sum(x is not None for x in (position, before, after))
         if provided > 1:
-            raise ValidationError(
-                "Provide at most one of 'position', 'before', or 'after'."
-            )
+            raise ValidationError("Provide at most one of 'position', 'before', or 'after'.")
 
         with self._lock:
-            self._tracer.record("insert", value=value, position=position,
-                                before=before, after=after)
+            self._tracer.record(
+                "insert", value=value, position=position, before=before, after=after
+            )
 
             if before is not None:
                 target = self._find_node(before)
@@ -311,10 +311,10 @@ class DoublyLinkedList(Generic[T]):
     def insert(self, *args, **kwargs):
         if kwargs:
             if len(args) == 1:
-                kwargs.setdefault('value', args[0])
+                kwargs.setdefault("value", args[0])
             elif len(args) == 2:
-                kwargs.setdefault('position', args[0])
-                kwargs.setdefault('value', args[1])
+                kwargs.setdefault("position", args[0])
+                kwargs.setdefault("value", args[1])
             self._insert_original(**kwargs)
         elif len(args) == 1:
             self._insert_original(value=args[0])
@@ -336,9 +336,7 @@ class DoublyLinkedList(Generic[T]):
         with self._lock:
             self._tracer.record("extend")
             items: list[T] = (
-                values._to_list_unsafe()
-                if isinstance(values, DoublyLinkedList)
-                else list(values)
+                values._to_list_unsafe() if isinstance(values, DoublyLinkedList) else list(values)
             )
             for item in items:
                 self._append(item)
@@ -351,12 +349,12 @@ class DoublyLinkedList(Generic[T]):
         self,
         value: T | None = None,
         position: int | None = None,
-        range: tuple[int, int] | None = None,
+        rng: tuple[int, int] | None = None,
     ) -> T | list[T] | None:
         """
         Remove and return node(s) from the list.
 
-        Provide exactly one of *value*, *position*, or *range*.
+        Provide exactly one of *value*, *position*, or *rng*.
 
         Parameters
         ----------
@@ -364,7 +362,7 @@ class DoublyLinkedList(Generic[T]):
             Remove the first node whose value equals this.
         position:
             Remove the node at this zero-based index.
-        range:
+        rng:
             A ``(start, end)`` tuple (both inclusive) of indices to
             remove.  Returns a list of removed values.
 
@@ -373,7 +371,7 @@ class DoublyLinkedList(Generic[T]):
         T
             The removed value when *value* or *position* is used.
         list[T]
-            When *range* is used.
+            When *rng* is used.
 
         Raises
         ------
@@ -383,22 +381,17 @@ class DoublyLinkedList(Generic[T]):
         InvalidRangeError
         ValidationError
         """
-        provided = sum(x is not None for x in (value, position, range))
+        provided = sum(x is not None for x in (value, position, rng))
         if provided == 0:
-            raise ValidationError(
-                "Provide one of 'value', 'position', or 'range'."
-            )
+            raise ValidationError("Provide one of 'value', 'position', or 'range'.")
         if provided > 1:
-            raise ValidationError(
-                "Provide only one of 'value', 'position', or 'range'."
-            )
+            raise ValidationError("Provide only one of 'value', 'position', or 'range'.")
 
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("delete from an empty list")
 
-            self._tracer.record("delete", value=value, position=position,
-                                range=range)
+            self._tracer.record("delete", value=value, position=position, rng=rng)
 
             if value is not None:
                 node = self._find_node(value)
@@ -411,7 +404,7 @@ class DoublyLinkedList(Generic[T]):
                 return self._remove_node(node)
 
             # range deletion
-            start, end = range  # type: ignore[misc]
+            start, end = rng  # type: ignore[misc]
             validate_range(start, end, self._size)
             removed: list[T] = []
             node = self._node_at(start)
@@ -432,7 +425,7 @@ class DoublyLinkedList(Generic[T]):
                 return self._delete_original(value=arg)
         elif len(args) == 2:
             start, end = args
-            return self._delete_original(range=(start, end))
+            return self._delete_original(rng=(start, end))
         else:
             return self._delete_original(*args)
 
@@ -552,15 +545,14 @@ class DoublyLinkedList(Generic[T]):
         if new_value is None:
             raise ValidationError("'new_value' must be provided.")
         with self._lock:
-            self._tracer.record("replace", old_value=old_value,
-                                new_value=new_value, position=position)
+            self._tracer.record(
+                "replace", old_value=old_value, new_value=new_value, position=position
+            )
             if position is not None:
                 self._node_at(position).value = new_value
                 return 1
             if old_value is None:
-                raise ValidationError(
-                    "Provide either 'position' or 'old_value'."
-                )
+                raise ValidationError("Provide either 'position' or 'old_value'.")
             count = 0
             node = self._head
             while node is not None:
@@ -626,35 +618,37 @@ class DoublyLinkedList(Generic[T]):
 
             while left is not right and left is not right.next:
                 left.value, right.value = right.value, left.value
-                left = left.next   # type: ignore[assignment]
+                left = left.next  # type: ignore[assignment]
                 right = right.prev  # type: ignore[assignment]
 
     def rotate(self, shift=1, start=None, end=None, direction=True):
         if self._size == 0:
             raise EmptyStructureError("rotate an empty list")
-        
+
         if shift == 0 and start is None and end is None and direction is True:
             return
-        
+
         if start is not None or end is not None or not direction:
-            self.rotate_full(start=0 if start is None else start,
-                            end=self._size - 1 if end is None else end,
-                            direction=direction, shift=shift)
+            self.rotate_full(
+                start=0 if start is None else start,
+                end=self._size - 1 if end is None else end,
+                direction=direction,
+                shift=shift,
+            )
             return
-        
+
         dir_right = True
         actual_shift = shift
         if shift < 0:
             actual_shift = abs(shift)
             dir_right = False
-        
-        self.rotate_full(start=0, end=self._size - 1, direction=dir_right, shift=actual_shift)
 
+        self.rotate_full(start=0, end=self._size - 1, direction=dir_right, shift=actual_shift)
 
     def rotate_full(self, start: int, end: int, direction: bool = True, shift: int = 1) -> None:
         """
         Rotate a sub-range of the list (full interface).
-        
+
         Args:
             start: Inclusive start index
             end: Inclusive end index
@@ -664,68 +658,67 @@ class DoublyLinkedList(Generic[T]):
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate an empty list")
-            
+
             # Normalize indices
             if start < 0:
                 start = self._size + start
             if end < 0:
                 end = self._size + end
-            
+
             validate_range(start, end, self._size)
-            
+
             length = end - start + 1
             if length <= 1:
                 return
-            
+
             effective_shift = shift % length
             if effective_shift == 0:
                 return
-            
+
             if not direction:
                 effective_shift = length - effective_shift
-            
-            self._tracer.record("rotate", start=start, end=end, 
-                                direction=direction, shift=effective_shift)
-            
+
+            self._tracer.record(
+                "rotate", start=start, end=end, direction=direction, shift=effective_shift
+            )
+
             # Get values in range
             values = []
             node = self._node_at(start)
             for _ in range(length):
                 values.append(node.value)
                 node = node.next  # type: ignore[union-attr]
-            
+
             # Rotate values
             rotated = values[-effective_shift:] + values[:-effective_shift]
-            
+
             # Write back
             node = self._node_at(start)
             for v in rotated:
                 node.value = v
                 node = node.next  # type: ignore[union-attr]
 
-
     def _rotate_full_list(self, shift: int) -> None:
         """
         Efficiently rotate the entire list by `shift` positions right.
-        
+
         This is O(n) but uses value rotation rather than pointer manipulation
         to maintain consistency across all list types.
         """
         if shift == 0 or self._size <= 1:
             return
-        
+
         # Get all values
         values = self._to_list_unsafe()
-        
+
         # Rotate values
         rotated = values[-shift:] + values[:-shift]
-        
+
         # Write back
         node = self._head
         for v in rotated:
             node.value = v  # type: ignore[union-attr]
             node = node.next  # type: ignore[assignment]
-
 
     def _rotate_subrange(self, start: int, end: int, shift: int) -> None:
         """
@@ -738,11 +731,11 @@ class DoublyLinkedList(Generic[T]):
         for _ in range(end - start + 1):
             nodes.append(node)
             node = node.next  # type: ignore[union-attr]
-        
+
         # Get values and rotate
         values = [n.value for n in nodes]
         rotated = values[-shift:] + values[:-shift]
-        
+
         # Write back rotated values
         for n, v in zip(nodes, rotated):
             n.value = v
@@ -785,8 +778,9 @@ class DoublyLinkedList(Generic[T]):
             if self._size == 0:
                 raise EmptyStructureError("swap in an empty list")
 
-            self._tracer.record("swap", value1=value1, value2=value2,
-                                pos1=pos1, pos2=pos2, pairwise=pairwise)
+            self._tracer.record(
+                "swap", value1=value1, value2=value2, pos1=pos1, pos2=pos2, pairwise=pairwise
+            )
 
             if pairwise:
                 node = self._head
@@ -811,9 +805,7 @@ class DoublyLinkedList(Generic[T]):
                 n1.value, n2.value = n2.value, n1.value
                 return
 
-            raise ValidationError(
-                "Provide (value1, value2), (pos1, pos2), or pairwise=True."
-            )
+            raise ValidationError("Provide (value1, value2), (pos1, pos2), or pairwise=True.")
 
     def swap(self, *args, **kwargs):
         if kwargs:
@@ -863,7 +855,7 @@ class DoublyLinkedList(Generic[T]):
             values.sort(key=key, reverse=reverse)  # type: ignore[type-var]
             node = self._head
             for v in values:
-                node.value = v   # type: ignore[union-attr]
+                node.value = v  # type: ignore[union-attr]
                 node = node.next  # type: ignore[assignment]
 
     def partition(self, predicate_or_pivot):
@@ -888,9 +880,7 @@ class DoublyLinkedList(Generic[T]):
     #  Interview Problems                                                  #
     # ------------------------------------------------------------------ #
 
-    def detect_cycle(
-        self, return_start: bool = False
-    ) -> bool | tuple[bool, Any]:
+    def detect_cycle(self, return_start: bool = False) -> bool | tuple[bool, Any]:
         """
         Floyd's cycle-detection algorithm.
 
@@ -915,7 +905,7 @@ class DoublyLinkedList(Generic[T]):
             fast = self._head
             has_cycle = False
             while fast is not None and fast.next is not None:
-                slow = slow.next        # type: ignore[union-attr]
+                slow = slow.next  # type: ignore[union-attr]
                 fast = fast.next.next
                 if slow is fast:
                     has_cycle = True
@@ -980,27 +970,25 @@ class DoublyLinkedList(Generic[T]):
                     node.value = v  # type: ignore[union-attr]
                     node = node.next  # type: ignore[assignment]
             else:
-                raise ValidationError(
-                    f"Unknown reorder mode: '{mode}'. Supported: 'odd_even'."
-                )
+                raise ValidationError(f"Unknown reorder mode: '{mode}'. Supported: 'odd_even'.")
 
     def segregate_even_odd(self) -> None:
         """
         Move all even-valued elements before odd-valued elements.
-        
+
         Works only for integer-valued lists. Order within each group is
         preserved (stable). Non-integer values are treated as odd.
         """
         with self._lock:
             if self._size <= 1:
                 return
-            
+
             self._tracer.record("segregate_even_odd")
-            
+
             # Collect values in order
             evens: list[T] = []
             odds: list[T] = []
-            
+
             node = self._head
             while node is not None:
                 try:
@@ -1013,10 +1001,10 @@ class DoublyLinkedList(Generic[T]):
                     # If can't check parity, treat as odd
                     odds.append(node.value)
                 node = node.next
-            
+
             # Combine: evens first, then odds
             all_values = evens + odds
-            
+
             # Write back to list
             node = self._head
             for v in all_values:
@@ -1037,6 +1025,7 @@ class DoublyLinkedList(Generic[T]):
         """
         with self._lock:
             return serialize_to_json(self._to_list_unsafe())
+
     def serialize(self) -> str:
         """Alias for to_json() for test compatibility."""
         return self.to_json()
@@ -1097,6 +1086,7 @@ class DoublyLinkedList(Generic[T]):
                 "values": self._to_list_unsafe(),
                 "events": self._tracer.get_events(),
             }
+
     # ------------------------------------------------------------------ #
     #  Public properties for testing compatibility                        #
     # ------------------------------------------------------------------ #
@@ -1112,6 +1102,7 @@ class DoublyLinkedList(Generic[T]):
         """Return the tail node (for testing compatibility)."""
         with self._lock:
             return self._tail
+
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #

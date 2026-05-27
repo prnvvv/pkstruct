@@ -4,6 +4,7 @@ pkstruct.linear.linked_lists.singly_linked_list
 Production-grade singly linked list with full API, thread safety,
 serialization, visualization, and interview-problem helpers.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
@@ -14,16 +15,12 @@ from pkstruct.shared.debugging import DebugTracer
 from pkstruct.shared.threading import StructureLock
 from pkstruct.shared.serializers import deserialize_from_json, serialize_to_json
 from pkstruct.shared.validators import validate_index, validate_range
-from pkstruct.shared.debugging import DebugTracer
 from pkstruct.shared.exceptions import (
     EmptyStructureError,
     IndexOutOfRangeError,
     ValidationError,
     ValueNotFoundError,
 )
-from pkstruct.shared.serializers import deserialize_from_json, serialize_to_json
-from pkstruct.shared.threading import StructureLock
-from pkstruct.shared.validators import validate_index, validate_range
 
 T = TypeVar("T")
 
@@ -67,9 +64,7 @@ class SinglyLinkedList(Generic[T]):
             ValidationError: If *items* is not a list.
         """
         if not isinstance(items, list):
-            raise ValidationError(
-                f"'items' must be a list, got {type(items).__name__!r}."
-            )
+            raise ValidationError(f"'items' must be a list, got {type(items).__name__!r}.")
         sll: SinglyLinkedList[T] = cls()
         for item in items:
             sll._append(item)
@@ -93,6 +88,7 @@ class SinglyLinkedList(Generic[T]):
         """
         items: list[T] = deserialize_from_json(json_str)  # type: ignore[assignment]
         return cls.from_list(items)
+
     def to_json(self) -> str:
         """Serialize the list to a JSON string (list of items)."""
         return serialize_to_json(self.to_list())
@@ -183,9 +179,7 @@ class SinglyLinkedList(Generic[T]):
         """
         _count = sum(x is not None for x in (position, before, after))
         if _count > 1:
-            raise ValidationError(
-                "Provide at most one of 'position', 'before', or 'after'."
-            )
+            raise ValidationError("Provide at most one of 'position', 'before', or 'after'.")
         with self._lock:
             self._tracer.record("insert", value=value, position=position)
 
@@ -218,10 +212,10 @@ class SinglyLinkedList(Generic[T]):
     def insert(self, *args, **kwargs):
         if kwargs:
             if len(args) == 1:
-                kwargs.setdefault('value', args[0])
+                kwargs.setdefault("value", args[0])
             elif len(args) == 2:
-                kwargs.setdefault('position', args[0])
-                kwargs.setdefault('value', args[1])
+                kwargs.setdefault("position", args[0])
+                kwargs.setdefault("value", args[1])
             self._insert_original(**kwargs)
         elif len(args) == 1:
             self._insert_original(value=args[0])
@@ -289,7 +283,7 @@ class SinglyLinkedList(Generic[T]):
         self,
         value: T | None = None,
         position: int | None = None,
-        range: tuple[int, int] | None = None,
+        rng: tuple[int, int] | None = None,
     ) -> "T | list[T] | None":
         """Remove element(s) and return the removed value(s).
 
@@ -298,7 +292,7 @@ class SinglyLinkedList(Generic[T]):
         Args:
             value:    Remove first occurrence of *value*.
             position: Remove element at 0-based *position*.
-            range:    Remove elements in the inclusive range ``(start, end)``.
+            rng:      Remove elements in the inclusive range ``(start, end)``.
 
         Returns:
             Removed value (scalar) or list of removed values (range).
@@ -310,15 +304,11 @@ class SinglyLinkedList(Generic[T]):
             InvalidRangeError:    If range bounds are invalid.
             EmptyStructureError:  If the list is empty.
         """
-        _given = sum(x is not None for x in (value, position, range))
+        _given = sum(x is not None for x in (value, position, rng))
         if _given == 0:
-            raise ValidationError(
-                "Provide exactly one of 'value', 'position', or 'range'."
-            )
+            raise ValidationError("Provide exactly one of 'value', 'position', or 'range'.")
         if _given > 1:
-            raise ValidationError(
-                "Provide exactly one of 'value', 'position', or 'range'."
-            )
+            raise ValidationError("Provide exactly one of 'value', 'position', or 'range'.")
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("delete")
@@ -326,8 +316,8 @@ class SinglyLinkedList(Generic[T]):
                 return self._delete_by_value(value)
             if position is not None:
                 return self._delete_by_position(position)
-            assert range is not None
-            return self._delete_range(range[0], range[1])
+            assert rng is not None
+            return self._delete_range(rng[0], rng[1])
 
     def _delete_by_value(self, target: T) -> T | None:
         prev: SinglyNode[T] | None = None
@@ -380,7 +370,7 @@ class SinglyLinkedList(Generic[T]):
                 return self._delete_original(value=arg)
         elif len(args) == 2:
             start, end = args
-            return self._delete_original(range=(start, end))
+            return self._delete_original(rng=(start, end))
         else:
             return self._delete_original(*args)
 
@@ -553,7 +543,7 @@ class SinglyLinkedList(Generic[T]):
     def rotate_full(self, start: int, end: int, direction: bool = True, shift: int = 1) -> None:
         """
         Rotate a sub-range of the list (full interface).
-        
+
         Args:
             start: Inclusive start index
             end: Inclusive end index
@@ -563,39 +553,40 @@ class SinglyLinkedList(Generic[T]):
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate an empty list")
-            
+
             # Normalize indices
             if start < 0:
                 start = self._size + start
             if end < 0:
                 end = self._size + end
-            
+
             validate_range(start, end, self._size)
-            
+
             length = end - start + 1
             if length <= 1:
                 return
-            
+
             effective_shift = shift % length
             if effective_shift == 0:
                 return
-            
+
             if not direction:
                 effective_shift = length - effective_shift
-            
-            self._tracer.record("rotate", start=start, end=end, 
-                                direction=direction, shift=effective_shift)
-            
+
+            self._tracer.record(
+                "rotate", start=start, end=end, direction=direction, shift=effective_shift
+            )
+
             # Get values in range
             values = []
             node = self._node_at(start)
             for _ in range(length):
                 values.append(node.value)
                 node = node.next  # type: ignore[union-attr]
-            
+
             # Rotate values
             rotated = values[-effective_shift:] + values[:-effective_shift]
-            
+
             # Write back
             node = self._node_at(start)
             for v in rotated:
@@ -611,22 +602,22 @@ class SinglyLinkedList(Generic[T]):
     ) -> None:
         """
         Rotate the list or a sub-range by `shift` positions.
-        
+
         This method supports two calling patterns:
-        
+
         1. Simple rotation (entire list):
             >>> ll.rotate(2)  # Rotate entire list right by 2
             >>> ll.rotate(-2) # Rotate entire list left by 2
-        
+
         2. Advanced rotation (sub-range):
             >>> ll.rotate(shift=2, start=1, end=5, direction=True)  # Rotate right by 2
-        
+
         Args:
             shift: Number of positions to rotate. Positive = right, negative = left.
             start: Inclusive start index (None = 0, entire list start)
             end: Inclusive end index (None = size-1, entire list end)
             direction: True = rotate right, False = rotate left (ignored if shift negative)
-        
+
         Raises:
             EmptyStructureError: If list is empty
             InvalidRangeError: If start/end indices are invalid
@@ -634,71 +625,74 @@ class SinglyLinkedList(Generic[T]):
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate an empty list")
-            
+
             # Handle negative shift as left rotation
             actual_shift = shift
             if shift < 0:
                 actual_shift = abs(shift)
                 direction = False
-            
+
             # Set default range to entire list
             actual_start = 0 if start is None else start
             actual_end = self._size - 1 if end is None else end
-            
+
             # Normalize negative indices
             if actual_start < 0:
                 actual_start = self._size + actual_start
             if actual_end < 0:
                 actual_end = self._size + actual_end
-            
+
             # Validate range
             validate_range(actual_start, actual_end, self._size)
-            
+
             length = actual_end - actual_start + 1
             if length <= 1:
                 return
-            
+
             # Calculate effective shift
             effective_shift = actual_shift % length
             if effective_shift == 0:
                 return
-            
+
             # Convert left rotation to right rotation
             if not direction:
                 effective_shift = length - effective_shift
-            
-            self._tracer.record("rotate", shift=actual_shift, start=actual_start, 
-                                end=actual_end, direction=direction)
-            
+
+            self._tracer.record(
+                "rotate",
+                shift=actual_shift,
+                start=actual_start,
+                end=actual_end,
+                direction=direction,
+            )
+
             # For full list rotation, we can use a more efficient approach
             if actual_start == 0 and actual_end == self._size - 1:
                 self._rotate_full_list(effective_shift)
             else:
                 self._rotate_subrange(actual_start, actual_end, effective_shift)
 
-
     def _rotate_full_list(self, shift: int) -> None:
         """
         Efficiently rotate the entire list by `shift` positions right.
-        
+
         This is O(n) but uses value rotation rather than pointer manipulation
         to maintain consistency across all list types.
         """
         if shift == 0 or self._size <= 1:
             return
-        
+
         # Get all values
         values = self._to_list_unsafe()
-        
+
         # Rotate values
         rotated = values[-shift:] + values[:-shift]
-        
+
         # Write back
         node = self._head
         for v in rotated:
             node.value = v  # type: ignore[union-attr]
             node = node.next  # type: ignore[assignment]
-
 
     def _rotate_subrange(self, start: int, end: int, shift: int) -> None:
         """
@@ -711,11 +705,11 @@ class SinglyLinkedList(Generic[T]):
         for _ in range(end - start + 1):
             nodes.append(node)
             node = node.next  # type: ignore[union-attr]
-        
+
         # Get values and rotate
         values = [n.value for n in nodes]
         rotated = values[-shift:] + values[:-shift]
-        
+
         # Write back rotated values
         for n, v in zip(nodes, rotated):
             n.value = v
@@ -768,9 +762,7 @@ class SinglyLinkedList(Generic[T]):
                 n1, n2 = self._node_at(i1), self._node_at(i2)
                 n1.value, n2.value = n2.value, n1.value
                 return
-            raise ValidationError(
-                "Provide (value1, value2), (pos1, pos2), or pairwise=True."
-            )
+            raise ValidationError("Provide (value1, value2), (pos1, pos2), or pairwise=True.")
 
     def swap(self, *args, **kwargs):
         if kwargs:
@@ -895,9 +887,7 @@ class SinglyLinkedList(Generic[T]):
     # Interview problems                                                   #
     # ------------------------------------------------------------------ #
 
-    def detect_cycle(
-        self, return_start: bool = False
-    ) -> "bool | tuple[bool, Any]":
+    def detect_cycle(self, return_start: bool = False) -> "bool | tuple[bool, Any]":
         """Detect a cycle using Floyd's tortoise-and-hare algorithm.
 
         This method is safe to call even if the internal structure has
@@ -1033,20 +1023,20 @@ class SinglyLinkedList(Generic[T]):
     def segregate_even_odd(self) -> None:
         """
         Move all even-valued elements before odd-valued elements.
-        
+
         Works only for integer-valued lists. Order within each group is
         preserved (stable). Non-integer values are treated as odd.
         """
         with self._lock:
             if self._size <= 1:
                 return
-            
+
             self._tracer.record("segregate_even_odd")
-            
+
             # Collect values in order
             evens: list[T] = []
             odds: list[T] = []
-            
+
             node = self._head
             while node is not None:
                 try:
@@ -1059,10 +1049,10 @@ class SinglyLinkedList(Generic[T]):
                     # If can't check parity, treat as odd
                     odds.append(node.value)
                 node = node.next
-            
+
             # Combine: evens first, then odds
             all_values = evens + odds
-            
+
             # Write back to list
             node = self._head
             for v in all_values:
@@ -1103,6 +1093,7 @@ class SinglyLinkedList(Generic[T]):
                 "values": self.to_list(),
                 "tracer": self._tracer.summary(),
             }
+
     # ------------------------------------------------------------------ #
     #  Public properties for testing compatibility                        #
     # ------------------------------------------------------------------ #
@@ -1123,6 +1114,7 @@ class SinglyLinkedList(Generic[T]):
             while node.next:
                 node = node.next
             return node
+
     # ------------------------------------------------------------------ #
     # Dunder methods                                                       #
     # ------------------------------------------------------------------ #
