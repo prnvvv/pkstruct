@@ -9,9 +9,6 @@ deadlock (important for recursive operations like merge-sort).
 from __future__ import annotations
 
 import threading
-from collections.abc import Generator
-from contextlib import contextmanager
-from typing import Any
 
 
 class StructureLock:
@@ -30,21 +27,13 @@ class StructureLock:
     def __init__(self) -> None:
         self._lock: threading.RLock = threading.RLock()
 
-    @contextmanager
-    def acquire(self) -> Generator[None, Any, None]:
-        """Context manager that acquires and releases the lock."""
-        self._lock.acquire()
-        try:
-            yield
-        finally:
-            self._lock.release()
-
-    def __enter__(self) -> "StructureLock":
+    def __enter__(self) -> StructureLock:
         self._lock.acquire()
         return self
 
     def __exit__(self, *_: object) -> None:
         self._lock.release()
+
     def acquire(self) -> None:
         """Acquire the lock."""
         self._lock.acquire()

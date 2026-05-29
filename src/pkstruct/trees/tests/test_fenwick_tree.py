@@ -7,8 +7,8 @@ Comprehensive tests for FenwickTree.
 from __future__ import annotations
 
 import pytest
-from pkstruct.trees.fenwick_tree import FenwickTree
 
+from pkstruct.trees.fenwick_tree import FenwickTree
 
 # ---------------------------------------------------------------------------
 # 1. Creation

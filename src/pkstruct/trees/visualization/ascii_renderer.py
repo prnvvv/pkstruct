@@ -11,7 +11,8 @@ attributes (``TreeNode``, ``AVLNode``, ``RBNode``, ``IntervalNode``, etc.).
 from __future__ import annotations
 
 from collections import deque
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 
 class AsciiRenderer:
@@ -59,11 +60,11 @@ class AsciiRenderer:
             return key_repr(root.key)
 
         tree_lines: list[str] = []
-        level: list[Optional[Any]] = [root]
+        level: list[Any | None] = [root]
         level_num = 0
 
         while level and level_num <= height:
-            next_level: list[Optional[Any]] = []
+            next_level: list[Any | None] = []
             for node in level:
                 if node is not None:
                     next_level.append(node.left)
@@ -88,7 +89,7 @@ class AsciiRenderer:
 
             if level_num < height:
                 connector_line: list[str] = []
-                for i, node in enumerate(level):
+                for _, node in enumerate(level):
                     if node is None:
                         connector_line.append(" " * (indent + between // 2 + 1))
                     else:
@@ -140,7 +141,7 @@ class AsciiRenderer:
         if root is None:
             return "(empty)"
 
-        def _build(node: Optional[Any]) -> str:
+        def _build(node: Any | None) -> str:
             if node is None:
                 return ""
             left_str = _build(node.left)
@@ -209,7 +210,7 @@ class AsciiRenderer:
         return "\n".join(lines)
 
     @staticmethod
-    def _height(node: Optional[Any]) -> int:
+    def _height(node: Any | None) -> int:
         """Compute the height of the tree rooted at *node*."""
         if node is None:
             return -1

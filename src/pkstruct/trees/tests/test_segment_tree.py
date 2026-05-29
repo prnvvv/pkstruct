@@ -7,8 +7,8 @@ Comprehensive tests for SegmentTree.
 from __future__ import annotations
 
 import pytest
-from pkstruct.trees.segment_tree import SegmentTree
 
+from pkstruct.trees.segment_tree import SegmentTree
 
 # ---------------------------------------------------------------------------
 # 1. Creation / building

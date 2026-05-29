@@ -7,8 +7,8 @@ Comprehensive tests for RedBlackTree.
 from __future__ import annotations
 
 import pytest
-from pkstruct.trees.red_black import RedBlackTree, BLACK, RED
 
+from pkstruct.trees.red_black import RedBlackTree
 
 # ---------------------------------------------------------------------------
 # Helpers

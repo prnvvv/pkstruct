@@ -25,8 +25,8 @@ Reusable helpers:
 from __future__ import annotations
 
 import math
-from typing import Any, Callable, Generic, Iterable, List, Optional, Protocol, TypeVar
-
+from collections.abc import Callable
+from typing import Any, Protocol, TypeVar
 
 # ---------------------------------------------------------------------------
 # Structural protocol
@@ -34,8 +34,8 @@ from typing import Any, Callable, Generic, Iterable, List, Optional, Protocol, T
 
 class _HasChildren(Protocol):
     """Minimal structural protocol for a binary tree node."""
-    left: Optional[Any]
-    right: Optional[Any]
+    left: Any | None
+    right: Any | None
 
 
 class _HasKey(_HasChildren, Protocol):
@@ -50,7 +50,7 @@ N = TypeVar("N")
 # Height / depth
 # ---------------------------------------------------------------------------
 
-def calculate_height(node: Optional[Any]) -> int:
+def calculate_height(node: Any | None) -> int:
     """
     Compute the height of the subtree rooted at node.
 
@@ -76,7 +76,7 @@ def calculate_height(node: Optional[Any]) -> int:
     return 1 + max(calculate_height(node.left), calculate_height(node.right))
 
 
-def tree_depth(node: Optional[Any]) -> int:
+def tree_depth(node: Any | None) -> int:
     """
     Alias for calculate_height().
 
@@ -91,7 +91,7 @@ def tree_depth(node: Optional[Any]) -> int:
 # Size / count
 # ---------------------------------------------------------------------------
 
-def calculate_size(node: Optional[Any]) -> int:
+def calculate_size(node: Any | None) -> int:
     """
     Count all nodes in the subtree rooted at node.
 
@@ -108,7 +108,7 @@ def calculate_size(node: Optional[Any]) -> int:
     return 1 + calculate_size(node.left) + calculate_size(node.right)
 
 
-def count_nodes(node: Optional[Any]) -> int:
+def count_nodes(node: Any | None) -> int:
     """
     Alias for calculate_size().
 
@@ -119,7 +119,7 @@ def count_nodes(node: Optional[Any]) -> int:
     return calculate_size(node)
 
 
-def count_leaves(node: Optional[Any]) -> int:
+def count_leaves(node: Any | None) -> int:
     """
     Count leaf nodes (nodes with no children) in the subtree.
 
@@ -184,9 +184,9 @@ def is_internal(node: Any) -> bool:
 # ---------------------------------------------------------------------------
 
 def clone_subtree(
-    node: Optional[N],
+    node: N | None,
     node_factory: Callable[[N], N],
-) -> Optional[N]:
+) -> N | None:
     """
     Deep-clone a subtree using a caller-supplied node factory.
 
@@ -226,7 +226,7 @@ def clone_subtree(
 # ---------------------------------------------------------------------------
 
 def validate_bst_order(
-    node: Optional[Any],
+    node: Any | None,
     key_fn: Callable[[Any], Any] = lambda n: n.key,
     min_val: Any = -math.inf,
     max_val: Any = math.inf,
@@ -275,10 +275,10 @@ def validate_bst_order(
 # ---------------------------------------------------------------------------
 
 def path_to_node(
-    root: Optional[Any],
+    root: Any | None,
     key_fn: Callable[[Any], Any],
     target_key: Any,
-) -> Optional[List[Any]]:
+) -> list[Any] | None:
     """
     Return the path (list of nodes) from root to the node with target_key.
 
@@ -295,7 +295,7 @@ def path_to_node(
     Returns:
         List of nodes from root to target (inclusive), or None if not found.
     """
-    path: List[Any] = []
+    path: list[Any] = []
     node = root
     while node is not None:
         path.append(node)
@@ -310,10 +310,10 @@ def path_to_node(
 
 
 def level_of_node(
-    root: Optional[Any],
+    root: Any | None,
     key_fn: Callable[[Any], Any],
     target_key: Any,
-) -> Optional[int]:
+) -> int | None:
     """
     Return the 0-based level (depth) of the node with target_key.
 
@@ -337,7 +337,7 @@ def level_of_node(
 # Width utilities
 # ---------------------------------------------------------------------------
 
-def max_width(root: Optional[Any]) -> int:
+def max_width(root: Any | None) -> int:
     """
     Return the maximum number of nodes on any single level (BFS width).
 

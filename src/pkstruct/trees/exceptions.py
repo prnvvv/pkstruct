@@ -10,7 +10,6 @@ while still being able to distinguish individual error types.
 
 from __future__ import annotations
 
-
 __all__ = [
     "TreeError",
     "KeyNotFoundError",

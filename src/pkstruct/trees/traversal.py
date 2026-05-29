@@ -33,16 +33,9 @@ All public functions are generator-based for memory efficiency.
 from __future__ import annotations
 
 from collections import defaultdict, deque
+from collections.abc import Generator
 from typing import (
     Any,
-    Deque,
-    Dict,
-    Generator,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Union,
 )
 
 from .node import TreeNode
@@ -63,10 +56,10 @@ __all__ = [
 # Type aliases
 # ---------------------------------------------------------------------------
 
-_Node = Optional[TreeNode]
-_Yield = Union[TreeNode, Tuple[Any, Any]]
+_Node = TreeNode | None
+_Yield = TreeNode | tuple[Any, Any]
 
-_ORDER_DISPATCH: Dict[str, str] = {
+_ORDER_DISPATCH: dict[str, str] = {
     "inorder": "_inorder",
     "preorder": "_preorder",
     "postorder": "_postorder",
@@ -214,7 +207,7 @@ def _inorder_rec(root: _Node) -> Generator[_Node, None, None]:
 
 
 def _inorder_iter(root: _Node) -> Generator[_Node, None, None]:
-    stack: List[_Node] = []
+    stack: list[_Node] = []
     current: _Node = root
     while current or stack:
         while current:
@@ -241,7 +234,7 @@ def _preorder_rec(root: _Node) -> Generator[_Node, None, None]:
 def _preorder_iter(root: _Node) -> Generator[_Node, None, None]:
     if root is None:
         return
-    stack: List[_Node] = [root]
+    stack: list[_Node] = [root]
     while stack:
         node = stack.pop()
         yield node
@@ -267,8 +260,8 @@ def _postorder_rec(root: _Node) -> Generator[_Node, None, None]:
 def _postorder_iter(root: _Node) -> Generator[_Node, None, None]:
     if root is None:
         return
-    stack: List[_Node] = [root]
-    result: List[_Node] = []
+    stack: list[_Node] = [root]
+    result: list[_Node] = []
     while stack:
         node = stack.pop()
         result.append(node)
@@ -287,7 +280,7 @@ def _postorder_iter(root: _Node) -> Generator[_Node, None, None]:
 def _levelorder_iter(root: _Node) -> Generator[_Node, None, None]:
     if root is None:
         return
-    queue: Deque[_Node] = deque([root])
+    queue: deque[_Node] = deque([root])
     while queue:
         node = queue.popleft()
         yield node
@@ -311,7 +304,7 @@ def _reverse_inorder_rec(root: _Node) -> Generator[_Node, None, None]:
 
 
 def _reverse_inorder_iter(root: _Node) -> Generator[_Node, None, None]:
-    stack: List[_Node] = []
+    stack: list[_Node] = []
     current: _Node = root
     while current or stack:
         while current:
@@ -330,10 +323,10 @@ def _reverse_inorder_iter(root: _Node) -> Generator[_Node, None, None]:
 def _zigzag_iter(root: _Node) -> Generator[_Node, None, None]:
     if root is None:
         return
-    current_level: List[_Node] = [root]
+    current_level: list[_Node] = [root]
     left_to_right = True
     while current_level:
-        next_level: List[_Node] = []
+        next_level: list[_Node] = []
         if left_to_right:
             for node in current_level:
                 yield node
@@ -379,7 +372,7 @@ def _boundary_iter(root: _Node) -> Generator[_Node, None, None]:
     yield from _leaves_iter(root.right)
 
     # Right boundary (bottom-up, excluding leaf)
-    right_boundary: List[_Node] = []
+    right_boundary: list[_Node] = []
     node = root.right
     while node:
         if not (node.left is None and node.right is None):
@@ -413,8 +406,8 @@ def _vertical_iter(root: _Node) -> Generator[_Node, None, None]:
     if root is None:
         return
     # BFS tracking horizontal distance
-    hd_map: Dict[int, List[_Node]] = defaultdict(list)
-    queue: Deque[Tuple[_Node, int]] = deque([(root, 0)])
+    hd_map: dict[int, list[_Node]] = defaultdict(list)
+    queue: deque[tuple[_Node, int]] = deque([(root, 0)])
     while queue:
         node, hd = queue.popleft()
         hd_map[hd].append(node)
@@ -433,7 +426,7 @@ def _vertical_iter(root: _Node) -> Generator[_Node, None, None]:
 
 def iter_levels(
     root: _Node,
-) -> Generator[List[Tuple[Any, Any]], None, None]:
+) -> Generator[list[tuple[Any, Any]], None, None]:
     """
     Yield one list of ``(key, value)`` pairs per level (BFS).
 
@@ -451,10 +444,10 @@ def iter_levels(
     """
     if root is None:
         return
-    current_level: List[_Node] = [root]
+    current_level: list[_Node] = [root]
     while current_level:
         yield [(n.key, n.value) for n in current_level]
-        next_level: List[_Node] = []
+        next_level: list[_Node] = []
         for node in current_level:
             if node.left:
                 next_level.append(node.left)

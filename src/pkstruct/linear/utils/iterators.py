@@ -1,12 +1,14 @@
 """Iterator utilities for pkstruct linked lists."""
 from __future__ import annotations
-from typing import Any, Generator, Iterator, Optional
+
+from collections.abc import Iterator
+from typing import Any
 
 
 def _get_list_types() -> tuple[type, type, type]:
-    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
-    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
     from pkstruct.linear.linked_lists.circular_linked_list import CircularLinkedList
+    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
+    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
     return SinglyLinkedList, DoublyLinkedList, CircularLinkedList
 
 
@@ -111,7 +113,7 @@ class CircularIterator:
         TypeError: If *list_instance* is not a CircularLinkedList.
     """
 
-    def __init__(self, list_instance: Any, max_cycles: Optional[int] = None, max_steps: Optional[int] = None) -> None:
+    def __init__(self, list_instance: Any, max_cycles: int | None = None, max_steps: int | None = None) -> None:
         self._list = list_instance
         self._max_cycles = max_cycles
         self._max_steps = max_steps

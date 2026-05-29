@@ -7,8 +7,8 @@ Comprehensive tests for IntervalTree.
 from __future__ import annotations
 
 import pytest
-from pkstruct.trees.interval_tree import IntervalTree
 
+from pkstruct.trees.interval_tree import IntervalTree
 
 # ---------------------------------------------------------------------------
 # 1. Creation / empty state

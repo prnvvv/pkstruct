@@ -1,6 +1,8 @@
 """ASCII art visualization for linked list structures."""
 from __future__ import annotations
-from typing import Any, Callable, Optional
+
+from collections.abc import Callable
+from typing import Any
 
 
 class AsciiVisualizer:

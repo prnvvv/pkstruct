@@ -28,9 +28,8 @@ Complexity:
 
 from __future__ import annotations
 
-import math
+from collections.abc import Callable, Sequence
 from math import gcd
-from typing import Callable, List, Optional, Sequence, Union
 
 # ---------------------------------------------------------------------------
 # Supported operations
@@ -116,8 +115,8 @@ class SegmentTree:
         self._lazy_propagate: Callable[[int, int, int], int] = _LAZY_PROPAGATE[operation]
 
         self._n: int = 0
-        self._tree: List[int] = []
-        self._lazy: List[int] = []
+        self._tree: list[int] = []
+        self._lazy: list[int] = []
 
         if not data:
             raise ValueError("Cannot build a segment tree from an empty sequence.")
@@ -154,7 +153,7 @@ class SegmentTree:
         self._lazy = [self._identity] * size
         self._build(data, 1, 0, self._n - 1)
 
-    def _build(self, data: List[int], node: int, start: int, end: int) -> None:
+    def _build(self, data: list[int], node: int, start: int, end: int) -> None:
         if start == end:
             self._tree[node] = data[start]
             return
@@ -361,9 +360,8 @@ class SegmentTree:
         if start == end:
             return self._tree[node]
         mid = (start + end) // 2
-        left_val = self._validate(2 * node, start, mid)
-        right_val = self._validate(2 * node + 1, mid + 1, end)
-        expected = self._op(left_val, right_val)
+        self._validate(2 * node, start, mid)
+        self._validate(2 * node + 1, mid + 1, end)
         # Note: with pending lazy values the internal node may differ; skip check
         return self._tree[node]
 

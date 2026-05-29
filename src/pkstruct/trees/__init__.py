@@ -47,8 +47,8 @@ Example
 """
 
 from pkstruct.trees.avl import AVLTree
-from pkstruct.trees.bst import BinarySearchTree
 from pkstruct.trees.bplus import BPlusTree
+from pkstruct.trees.bst import BinarySearchTree
 from pkstruct.trees.btree import BTree
 from pkstruct.trees.exceptions import (
     DuplicateKeyError,

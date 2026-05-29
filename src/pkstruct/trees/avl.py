@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import collections
 import json
-from typing import Any, Optional
+from typing import Any
 
 from pkstruct.trees.balancing import (
     get_balance_factor,
@@ -101,10 +101,10 @@ class AVLTree(BinarySearchTree):
 
     def _avl_insert(
         self,
-        node: Optional[AVLNode],
+        node: AVLNode | None,
         key: Any,
         value: Any,
-    ) -> tuple[Optional[AVLNode], bool]:
+    ) -> tuple[AVLNode | None, bool]:
         """Recursive AVL insert; returns (new_subtree_root, was_inserted)."""
         if node is None:
             return AVLNode(key, value), True
@@ -143,9 +143,9 @@ class AVLTree(BinarySearchTree):
 
     def _avl_delete(
         self,
-        node: Optional[AVLNode],
+        node: AVLNode | None,
         key: Any,
-    ) -> tuple[Optional[AVLNode], bool]:
+    ) -> tuple[AVLNode | None, bool]:
         """Recursive AVL delete; returns (new_subtree_root, was_deleted)."""
         if node is None:
             return None, False
@@ -207,7 +207,7 @@ class AVLTree(BinarySearchTree):
             return True
         return validate_balance(self._root) and self._check_heights(self._root)
 
-    def _check_heights(self, node: Optional[AVLNode]) -> bool:
+    def _check_heights(self, node: AVLNode | None) -> bool:
         """Verify stored height values are consistent with tree structure."""
         if node is None:
             return True
@@ -255,8 +255,8 @@ class AVLTree(BinarySearchTree):
         """Serialize the tree to a JSON string (level-order with null sentinels)."""
         if self._root is None:
             return "[]"
-        result: list[Optional[Any]] = []
-        q: collections.deque[Optional[AVLNode]] = collections.deque([self._root])
+        result: list[Any | None] = []
+        q: collections.deque[AVLNode | None] = collections.deque([self._root])
         while q:
             node = q.popleft()
             if node is None:
@@ -272,7 +272,7 @@ class AVLTree(BinarySearchTree):
     def deserialize(self, data: str) -> None:
         """Rebuild the tree from a JSON string, creating AVLNodes."""
         self.clear()
-        keys: list[Optional[Any]] = json.loads(data)
+        keys: list[Any | None] = json.loads(data)
         if not keys:
             return
         self._root = AVLNode(keys[0])
@@ -293,7 +293,7 @@ class AVLTree(BinarySearchTree):
             i += 1
         self._fix_heights(self._root)
 
-    def _fix_heights(self, node: Optional[AVLNode]) -> None:
+    def _fix_heights(self, node: AVLNode | None) -> None:
         """Post-order traversal to recalculate heights after deserialization."""
         if node is None:
             return

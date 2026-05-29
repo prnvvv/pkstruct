@@ -1,13 +1,14 @@
 """Debug and integrity utilities for pkstruct linked lists."""
 from __future__ import annotations
+
 import sys
 from typing import Any
 
 
 def _get_list_types() -> tuple[type, type, type]:
-    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
-    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
     from pkstruct.linear.linked_lists.circular_linked_list import CircularLinkedList
+    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
+    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
     return SinglyLinkedList, DoublyLinkedList, CircularLinkedList
 
 
@@ -137,12 +138,10 @@ def _validate_singly(lst: Any) -> tuple[list[str], bool]:
     # Floyd's cycle detection
     slow = lst.head
     fast = lst.head
-    has_cycle = False
     while fast is not None and fast.next is not None:
         slow = slow.next
         fast = fast.next.next
         if slow is fast:
-            has_cycle = True
             errors.append("Cycle detected in SinglyLinkedList.")
             break
 

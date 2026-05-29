@@ -45,6 +45,7 @@ Documentation = "https://pkstruct.readthedocs.io"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pkstruct"]
+exclude = ["**/tests/**", "**/test_*.py", "**/test_*.pyi"]
 
 [tool.mypy]
 python_version = "3.10"

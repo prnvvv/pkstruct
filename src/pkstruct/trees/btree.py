@@ -40,7 +40,8 @@ Space   O(n)
 
 from __future__ import annotations
 
-from typing import Any, Iterator, List, Optional, Tuple
+from collections.abc import Iterator
+from typing import Any
 
 from pkstruct.trees.exceptions import (
     DuplicateKeyError,
@@ -222,12 +223,12 @@ class BTree:
                     idx -= 1
             self._delete(node.children[idx], key)
 
-    def _get_predecessor(self, node: BTreeNode) -> Tuple[Any, Any]:
+    def _get_predecessor(self, node: BTreeNode) -> tuple[Any, Any]:
         while not node.is_leaf():
             node = node.children[-1]
         return (node.keys[-1], node.values[-1])
 
-    def _get_successor(self, node: BTreeNode) -> Tuple[Any, Any]:
+    def _get_successor(self, node: BTreeNode) -> tuple[Any, Any]:
         while not node.is_leaf():
             node = node.children[0]
         return (node.keys[0], node.values[0])
@@ -279,7 +280,7 @@ class BTree:
             return node.children[idx + 1]
         return node.children[idx - 1]
 
-    def search(self, key: Any) -> Optional[Any]:
+    def search(self, key: Any) -> Any | None:
         """Return the value associated with *key*, or *None* if absent."""
         try:
             node, idx = self._search(self._root, key)
@@ -287,7 +288,7 @@ class BTree:
         except (KeyNotFoundError, TypeError):
             return None
 
-    def _search(self, node: Optional[BTreeNode], key: Any) -> Tuple[BTreeNode, int]:
+    def _search(self, node: BTreeNode | None, key: Any) -> tuple[BTreeNode, int]:
         if node is None:
             raise KeyNotFoundError(key)
         i = 0
@@ -325,7 +326,7 @@ class BTree:
         except KeyNotFoundError:
             pass
 
-    def _find(self, node: Optional[BTreeNode], key: Any) -> Optional[BTreeNode]:
+    def _find(self, node: BTreeNode | None, key: Any) -> BTreeNode | None:
         try:
             n, _ = self._search(node, key)
             return n
@@ -408,11 +409,11 @@ class BTree:
 
     def _validate(
         self,
-        node: Optional[BTreeNode],
+        node: BTreeNode | None,
         lo: Any,
         hi: Any,
-        depth: Optional[int] = None,
-        leaf_depth: Optional[list] = None,
+        depth: int | None = None,
+        leaf_depth: list | None = None,
     ) -> None:
         if node is None:
             return
@@ -435,7 +436,7 @@ class BTree:
             assert node.keys[i] < node.keys[i + 1], "Keys not sorted"
 
         # BST ordering
-        for i, k in enumerate(node.keys):
+        for _, k in enumerate(node.keys):
             if lo is not None and k <= lo:
                 raise ValueError(f"Key {k} <= lower bound {lo}")
             if hi is not None and k >= hi:
@@ -471,7 +472,7 @@ class BTree:
         """Iterate over keys in ascending order."""
         yield from self._inorder(self._root)
 
-    def _inorder(self, node: Optional[BTreeNode]) -> Iterator[Any]:
+    def _inorder(self, node: BTreeNode | None) -> Iterator[Any]:
         if node is None:
             return
         if node.is_leaf():

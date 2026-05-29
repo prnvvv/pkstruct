@@ -47,7 +47,8 @@ from __future__ import annotations
 
 import collections
 import json
-from typing import Any, Generator, Iterator, Optional
+from collections.abc import Generator, Iterator
+from typing import Any
 
 from pkstruct.trees.node import TreeNode
 
@@ -67,7 +68,7 @@ class BinarySearchTree:
     # ------------------------------------------------------------------
 
     def __init__(self, allow_duplicates: bool = False) -> None:
-        self._root: Optional[TreeNode] = None
+        self._root: TreeNode | None = None
         self._size: int = 0
         self._allow_duplicates = allow_duplicates
 
@@ -99,14 +100,14 @@ class BinarySearchTree:
 
     def _insert(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         key: Any,
         value: Any,
-    ) -> tuple[Optional[TreeNode], bool]:
+    ) -> tuple[TreeNode | None, bool]:
         if node is None:
             return TreeNode(key, value), True
         current = node
-        parent: Optional[TreeNode] = None
+        parent: TreeNode | None = None
         while current is not None:
             parent = current
             if key < current.key:
@@ -144,9 +145,9 @@ class BinarySearchTree:
 
     def _delete(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         key: Any,
-    ) -> tuple[Optional[TreeNode], bool]:
+    ) -> tuple[TreeNode | None, bool]:
         if node is None:
             return None, False
         if key < node.key:
@@ -166,7 +167,7 @@ class BinarySearchTree:
             node.right, _ = self._delete(node.right, successor.key)
         return node, deleted
 
-    def search(self, key: Any) -> Optional[Any]:
+    def search(self, key: Any) -> Any | None:
         """Return the value associated with *key*, or *None* if absent.
 
         Parameters
@@ -250,12 +251,12 @@ class BinarySearchTree:
             raise ValueError("Tree is empty")
         return self._max_node(self._root).key
 
-    def floor(self, key: Any) -> Optional[Any]:
+    def floor(self, key: Any) -> Any | None:
         """Return the largest key less than or equal to *key*, or *None*."""
         node = self._floor(self._root, key)
         return node.key if node is not None else None
 
-    def _floor(self, node: Optional[TreeNode], key: Any) -> Optional[TreeNode]:
+    def _floor(self, node: TreeNode | None, key: Any) -> TreeNode | None:
         if node is None:
             return None
         if key == node.key:
@@ -265,12 +266,12 @@ class BinarySearchTree:
         right = self._floor(node.right, key)
         return right if right is not None else node
 
-    def ceil(self, key: Any) -> Optional[Any]:
+    def ceil(self, key: Any) -> Any | None:
         """Return the smallest key greater than or equal to *key*, or *None*."""
         node = self._ceil(self._root, key)
         return node.key if node is not None else None
 
-    def _ceil(self, node: Optional[TreeNode], key: Any) -> Optional[TreeNode]:
+    def _ceil(self, node: TreeNode | None, key: Any) -> TreeNode | None:
         if node is None:
             return None
         if key == node.key:
@@ -284,7 +285,7 @@ class BinarySearchTree:
     # Navigation
     # ------------------------------------------------------------------
 
-    def predecessor(self, key: Any) -> Optional[Any]:
+    def predecessor(self, key: Any) -> Any | None:
         """Return the in-order predecessor key of *key*, or *None*.
 
         Raises
@@ -294,7 +295,7 @@ class BinarySearchTree:
         """
         if not self.contains(key):
             raise KeyError(key)
-        pred: Optional[TreeNode] = None
+        pred: TreeNode | None = None
         node = self._root
         while node is not None:
             if key < node.key:
@@ -308,7 +309,7 @@ class BinarySearchTree:
                 break
         return pred.key if pred is not None else None
 
-    def successor(self, key: Any) -> Optional[Any]:
+    def successor(self, key: Any) -> Any | None:
         """Return the in-order successor key of *key*, or *None*.
 
         Raises
@@ -318,7 +319,7 @@ class BinarySearchTree:
         """
         if not self.contains(key):
             raise KeyError(key)
-        succ: Optional[TreeNode] = None
+        succ: TreeNode | None = None
         node = self._root
         while node is not None:
             if key > node.key:
@@ -348,7 +349,7 @@ class BinarySearchTree:
 
     def _validate(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         lo: Any,
         hi: Any,
     ) -> bool:
@@ -362,7 +363,7 @@ class BinarySearchTree:
             node.right, node.key, hi
         )
 
-    def copy(self) -> "BinarySearchTree":
+    def copy(self) -> BinarySearchTree:
         """Return a deep copy of this tree (new nodes, same key/value pairs)."""
         new_tree: BinarySearchTree = BinarySearchTree(
             allow_duplicates=self._allow_duplicates
@@ -371,7 +372,7 @@ class BinarySearchTree:
         new_tree._size = self._size
         return new_tree
 
-    def _copy_node(self, node: Optional[TreeNode]) -> Optional[TreeNode]:
+    def _copy_node(self, node: TreeNode | None) -> TreeNode | None:
         if node is None:
             return None
         new_node = TreeNode(node.key, node.value)
@@ -383,7 +384,7 @@ class BinarySearchTree:
         """Mirror the tree in-place (swap left/right children at every node)."""
         self._invert(self._root)
 
-    def _invert(self, node: Optional[TreeNode]) -> None:
+    def _invert(self, node: TreeNode | None) -> None:
         if node is None:
             return
         node.left, node.right = node.right, node.left
@@ -394,7 +395,7 @@ class BinarySearchTree:
         """Return *True* if the tree is height-balanced (|left_h - right_h| ≤ 1 for every node)."""
         return self._check_balanced(self._root) != -2
 
-    def _check_balanced(self, node: Optional[TreeNode]) -> int:
+    def _check_balanced(self, node: TreeNode | None) -> int:
         """Return height if balanced, -2 as sentinel for unbalanced."""
         if node is None:
             return -1
@@ -414,7 +415,7 @@ class BinarySearchTree:
         self._diameter_helper(self._root)
         return self._diameter_max
 
-    def _diameter_helper(self, node: Optional[TreeNode]) -> int:
+    def _diameter_helper(self, node: TreeNode | None) -> int:
         if node is None:
             return -1
         lh = self._diameter_helper(node.left) + 1
@@ -443,7 +444,7 @@ class BinarySearchTree:
     # Interview utilities
     # ------------------------------------------------------------------
 
-    def find_lca(self, key1: Any, key2: Any) -> Optional[Any]:
+    def find_lca(self, key1: Any, key2: Any) -> Any | None:
         """Return the key of the Lowest Common Ancestor of *key1* and *key2*.
 
         Parameters
@@ -464,10 +465,10 @@ class BinarySearchTree:
 
     def _lca(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         k1: Any,
         k2: Any,
-    ) -> Optional[TreeNode]:
+    ) -> TreeNode | None:
         if node is None:
             return None
         if k1 < node.key and k2 < node.key:
@@ -507,7 +508,7 @@ class BinarySearchTree:
 
     def _reverse_inorder_collect(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         result: list,
         limit: int,
     ) -> None:
@@ -532,7 +533,7 @@ class BinarySearchTree:
 
     def _range_collect(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         lo: Any,
         hi: Any,
         result: list,
@@ -555,7 +556,7 @@ class BinarySearchTree:
 
     def _path_sum(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         target: int | float,
         current: int | float,
     ) -> bool:
@@ -576,7 +577,7 @@ class BinarySearchTree:
 
     def _collect_paths(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         current: list[Any],
         paths: list[list[Any]],
     ) -> None:
@@ -600,8 +601,8 @@ class BinarySearchTree:
         """
         if self._root is None:
             return "[]"
-        result: list[Optional[Any]] = []
-        queue: collections.deque[Optional[TreeNode]] = collections.deque([self._root])
+        result: list[Any | None] = []
+        queue: collections.deque[TreeNode | None] = collections.deque([self._root])
         while queue:
             node = queue.popleft()
             if node is None:
@@ -626,7 +627,7 @@ class BinarySearchTree:
             JSON string as returned by :meth:`serialize`.
         """
         self.clear()
-        keys: list[Optional[Any]] = json.loads(data)
+        keys: list[Any | None] = json.loads(data)
         if not keys:
             return
         self._root = TreeNode(keys[0])
@@ -661,7 +662,7 @@ class BinarySearchTree:
         self._right_boundary(self._root.right, result)
         return result
 
-    def _left_boundary(self, node: Optional[TreeNode], result: list) -> None:
+    def _left_boundary(self, node: TreeNode | None, result: list) -> None:
         if node is None or (node.left is None and node.right is None):
             return
         result.append(node.key)
@@ -670,7 +671,7 @@ class BinarySearchTree:
         else:
             self._left_boundary(node.right, result)
 
-    def _right_boundary(self, node: Optional[TreeNode], result: list) -> None:
+    def _right_boundary(self, node: TreeNode | None, result: list) -> None:
         if node is None or (node.left is None and node.right is None):
             return
         if node.right:
@@ -679,7 +680,7 @@ class BinarySearchTree:
             self._right_boundary(node.left, result)
         result.append(node.key)
 
-    def _leaves(self, node: Optional[TreeNode], result: list) -> None:
+    def _leaves(self, node: TreeNode | None, result: list) -> None:
         if node is None:
             return
         if node.left is None and node.right is None:
@@ -760,7 +761,7 @@ class BinarySearchTree:
         else:
             raise ValueError(f"Unknown traversal order: {order!r}")
 
-    def _inorder(self, node: Optional[TreeNode]) -> Generator[Any, None, None]:
+    def _inorder(self, node: TreeNode | None) -> Generator[Any, None, None]:
         stack: list[TreeNode] = []
         current = node
         while stack or current:
@@ -771,7 +772,7 @@ class BinarySearchTree:
             yield current.key
             current = current.right
 
-    def _preorder(self, node: Optional[TreeNode]) -> Generator[Any, None, None]:
+    def _preorder(self, node: TreeNode | None) -> Generator[Any, None, None]:
         if node is None:
             return
         stack: list[TreeNode] = [node]
@@ -783,7 +784,7 @@ class BinarySearchTree:
             if current.left:
                 stack.append(current.left)
 
-    def _postorder(self, node: Optional[TreeNode]) -> Generator[Any, None, None]:
+    def _postorder(self, node: TreeNode | None) -> Generator[Any, None, None]:
         if node is None:
             return
         stack1: list[TreeNode] = [node]
@@ -812,7 +813,7 @@ class BinarySearchTree:
 
     def _inorder_collect(
         self,
-        node: Optional[TreeNode],
+        node: TreeNode | None,
         result: list,
         limit: int,
     ) -> None:
@@ -827,7 +828,7 @@ class BinarySearchTree:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _find(self, node: Optional[TreeNode], key: Any) -> Optional[TreeNode]:
+    def _find(self, node: TreeNode | None, key: Any) -> TreeNode | None:
         while node is not None:
             if key < node.key:
                 node = node.left
@@ -837,7 +838,7 @@ class BinarySearchTree:
                 return node
         return None
 
-    def _height(self, node: Optional[TreeNode]) -> int:
+    def _height(self, node: TreeNode | None) -> int:
         if node is None:
             return -1
         return 1 + max(self._height(node.left), self._height(node.right))

@@ -55,7 +55,8 @@ All major operations are O(log n) due to the RB height bound
 
 from __future__ import annotations
 
-from typing import Any, Generator, Iterator, Optional
+from collections.abc import Generator, Iterator
+from typing import Any
 
 from pkstruct.trees.balancing import rotate
 from pkstruct.trees.node import RBNode
@@ -71,7 +72,7 @@ _NIL.right = None  # type: ignore[assignment]
 _NIL.parent = None  # type: ignore[assignment]
 
 
-def _is_nil(node: Optional[RBNode]) -> bool:
+def _is_nil(node: RBNode | None) -> bool:
     """Return *True* if *node* is the sentinel NIL or Python *None*."""
     return node is None or node is _NIL
 
@@ -135,10 +136,7 @@ class RedBlackTree:
         current: RBNode = self._root
         while not _is_nil(current):
             parent = current
-            if key < current.key:
-                current = current.left
-            else:
-                current = current.right
+            current = current.left if key < current.key else current.right
 
         new_node.parent = parent
         if _is_nil(parent):
@@ -382,7 +380,7 @@ class RedBlackTree:
 
         x.color = BLACK
 
-    def search(self, key: Any) -> Optional[Any]:
+    def search(self, key: Any) -> Any | None:
         """Return the value for *key*, or *None* if absent.
 
         Parameters
@@ -438,7 +436,7 @@ class RedBlackTree:
         """Return the tree height (-1 for empty, 0 for a single node)."""
         return self._height(self._root)
 
-    def _height(self, node: Optional[RBNode]) -> int:
+    def _height(self, node: RBNode | None) -> int:
         if _is_nil(node):
             return -1
         return 1 + max(self._height(node.left), self._height(node.right))
@@ -481,7 +479,7 @@ class RedBlackTree:
         """
         return self._black_height(self._root)
 
-    def _black_height(self, node: Optional[RBNode]) -> int:
+    def _black_height(self, node: RBNode | None) -> int:
         if _is_nil(node):
             return 0
         left_bh = self._black_height(node.left)
@@ -492,7 +490,7 @@ class RedBlackTree:
     # Navigation
     # ------------------------------------------------------------------
 
-    def predecessor(self, key: Any) -> Optional[Any]:
+    def predecessor(self, key: Any) -> Any | None:
         """Return the in-order predecessor key, or *None*.
 
         Raises
@@ -502,7 +500,7 @@ class RedBlackTree:
         """
         if not self.contains(key):
             raise KeyError(key)
-        pred: Optional[RBNode] = None
+        pred: RBNode | None = None
         node: RBNode = self._root
         while not _is_nil(node):
             if key < node.key:
@@ -516,7 +514,7 @@ class RedBlackTree:
                 break
         return pred.key if pred is not None and not _is_nil(pred) else None
 
-    def successor(self, key: Any) -> Optional[Any]:
+    def successor(self, key: Any) -> Any | None:
         """Return the in-order successor key, or *None*.
 
         Raises
@@ -526,7 +524,7 @@ class RedBlackTree:
         """
         if not self.contains(key):
             raise KeyError(key)
-        succ: Optional[RBNode] = None
+        succ: RBNode | None = None
         node: RBNode = self._root
         while not _is_nil(node):
             if key > node.key:
@@ -562,27 +560,24 @@ class RedBlackTree:
         bh = [None]
         if not self._check_black_height(self._root, 0, bh):
             return False
-        if not self._check_bst_order(self._root, None, None):
-            return False
-        return True
+        return self._check_bst_order(self._root, None, None)
 
     def validate(self) -> bool:
         """Alias for :meth:`is_red_black_valid`."""
         return self.is_red_black_valid()
 
-    def _check_no_red_red(self, node: Optional[RBNode]) -> bool:
+    def _check_no_red_red(self, node: RBNode | None) -> bool:
         if _is_nil(node):
             return True
-        if node.color == RED:
-            if (not _is_nil(node.left) and node.left.color == RED) or (
-                not _is_nil(node.right) and node.right.color == RED
-            ):
-                return False
+        if node.color == RED and ((not _is_nil(node.left) and node.left.color == RED) or (
+            not _is_nil(node.right) and node.right.color == RED
+        )):
+            return False
         return self._check_no_red_red(node.left) and self._check_no_red_red(node.right)
 
     def _check_black_height(
         self,
-        node: Optional[RBNode],
+        node: RBNode | None,
         current_bh: int,
         expected: list,
     ) -> bool:
@@ -597,7 +592,7 @@ class RedBlackTree:
 
     def _check_bst_order(
         self,
-        node: Optional[RBNode],
+        node: RBNode | None,
         lo: Any,
         hi: Any,
     ) -> bool:
@@ -615,7 +610,7 @@ class RedBlackTree:
     # Copy
     # ------------------------------------------------------------------
 
-    def copy(self) -> "RedBlackTree":
+    def copy(self) -> RedBlackTree:
         """Return a deep copy of this tree (new nodes, same key/value/color)."""
         new_tree = RedBlackTree(allow_duplicates=self._allow_duplicates)
         new_tree._root = self._copy_node(self._root, _NIL)
@@ -624,7 +619,7 @@ class RedBlackTree:
 
     def _copy_node(
         self,
-        node: Optional[RBNode],
+        node: RBNode | None,
         parent: RBNode,
     ) -> RBNode:
         if _is_nil(node):
@@ -640,7 +635,7 @@ class RedBlackTree:
     # Traversal helpers (private)
     # ------------------------------------------------------------------
 
-    def _inorder(self, node: Optional[RBNode]) -> Generator[Any, None, None]:
+    def _inorder(self, node: RBNode | None) -> Generator[Any, None, None]:
         if _is_nil(node):
             return
         yield from self._inorder(node.left)
@@ -651,7 +646,7 @@ class RedBlackTree:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _find(self, node: Optional[RBNode], key: Any) -> RBNode:
+    def _find(self, node: RBNode | None, key: Any) -> RBNode:
         while not _is_nil(node):
             if key < node.key:
                 node = node.left

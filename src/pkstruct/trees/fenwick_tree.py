@@ -29,7 +29,7 @@ Complexity:
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 
 class FenwickTree:
@@ -66,14 +66,14 @@ class FenwickTree:
 
     def __init__(
         self,
-        data: Optional[Sequence[int]] = None,
-        n: Optional[int] = None,
+        data: Sequence[int] | None = None,
+        n: int | None = None,
     ) -> None:
         if data is None and n is None:
             raise ValueError("Provide either 'data' or 'n'.")
         if data is not None:
             self._n: int = len(data)
-            self._tree: List[int] = [0] * (self._n + 1)
+            self._tree: list[int] = [0] * (self._n + 1)
             self.build(data)
         else:
             self._n = n  # type: ignore[assignment]

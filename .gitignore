@@ -30,9 +30,15 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.whl
+MANIFEST
+*.manifest
+*.spec
 
 # PyPI / packaging tools
 pip-wheel-metadata/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # ==========================================
 # Virtual Environments
@@ -65,8 +71,15 @@ htmlcov/
 .pyre/
 .pytype/
 .ruff_cache/
+.dmypy.json
+dmypy.json
 
-# ==========================================
+# Property-based testing cache
+.hypothesis/
+
+# pyenv
+.python-version
+
 # Jupyter
 # ==========================================
 
@@ -74,10 +87,14 @@ htmlcov/
 
 # ==========================================
 # IDE / Editor
-# ==========================================
-
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
 
 # macOS
 .DS_Store
@@ -136,16 +153,7 @@ data/
 # ==========================================
 # Optional: Ignore generated lock files
 # Uncomment if needed
-# ==========================================
 
 # poetry.lock
 # Pipfile.lock
-
-__pycache__/
-*.pyc
-dist/
-*.egg-info/
-pkstruct_test_env/
-files.txtfor
-.pytest_cache/
 

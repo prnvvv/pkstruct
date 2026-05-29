@@ -1,5 +1,6 @@
 """High-level visualizer that dispatches to AsciiVisualizer based on list type."""
 from __future__ import annotations
+
 from typing import Any
 
 from .ascii_visualizer import AsciiVisualizer
@@ -11,9 +12,9 @@ class LinkedListVisualizer:
     # Lazy imports to avoid circular dependencies at module load time.
     @staticmethod
     def _list_types() -> tuple[type, type, type]:
-        from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
-        from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
         from pkstruct.linear.linked_lists.circular_linked_list import CircularLinkedList
+        from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
+        from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
         return SinglyLinkedList, DoublyLinkedList, CircularLinkedList
 
     def visualize(self, list_instance: Any, style: str = "ascii") -> str:
@@ -110,9 +111,7 @@ class LinkedListVisualizer:
         head_value = list_instance.head.value if list_instance.head is not None else None
 
         # Tail: DoublyLinkedList has .tail; others we derive
-        if isinstance(list_instance, DoublyLinkedList):
-            tail_value = list_instance.tail.value if list_instance.tail is not None else None
-        elif isinstance(list_instance, CircularLinkedList):
+        if isinstance(list_instance, (DoublyLinkedList, CircularLinkedList)):
             tail_value = list_instance.tail.value if list_instance.tail is not None else None
         else:
             tail_value = values[-1] if values else None

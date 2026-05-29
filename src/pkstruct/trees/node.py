@@ -20,7 +20,7 @@ concrete subclass are never allocated.
 
 from __future__ import annotations
 
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 __all__ = [
     "TreeNode",
@@ -65,17 +65,17 @@ class TreeNode(Generic[KT, VT]):
     def __init__(
         self,
         key: KT,
-        value: Optional[VT] = None,
+        value: VT | None = None,
         *,
-        left: Optional["TreeNode[KT, VT]"] = None,
-        right: Optional["TreeNode[KT, VT]"] = None,
-        parent: Optional["TreeNode[KT, VT]"] = None,
+        left: TreeNode[KT, VT] | None = None,
+        right: TreeNode[KT, VT] | None = None,
+        parent: TreeNode[KT, VT] | None = None,
     ) -> None:
         self.key: KT = key
-        self.value: Optional[VT] = value
-        self.left: Optional["TreeNode[KT, VT]"] = left
-        self.right: Optional["TreeNode[KT, VT]"] = right
-        self.parent: Optional["TreeNode[KT, VT]"] = parent
+        self.value: VT | None = value
+        self.left: TreeNode[KT, VT] | None = left
+        self.right: TreeNode[KT, VT] | None = right
+        self.parent: TreeNode[KT, VT] | None = parent
 
     # ------------------------------------------------------------------
     # Helpers
@@ -97,7 +97,7 @@ class TreeNode(Generic[KT, VT]):
         """Return *True* when this node is the right child of its parent."""
         return self.parent is not None and self.parent.right is self
 
-    def sibling(self) -> Optional["TreeNode[KT, VT]"]:
+    def sibling(self) -> TreeNode[KT, VT] | None:
         """Return the sibling node, or *None* if no parent."""
         if self.parent is None:
             return None
@@ -129,11 +129,11 @@ class AVLNode(TreeNode[KT, VT]):
     def __init__(
         self,
         key: KT,
-        value: Optional[VT] = None,
+        value: VT | None = None,
         *,
-        left: Optional["AVLNode[KT, VT]"] = None,
-        right: Optional["AVLNode[KT, VT]"] = None,
-        parent: Optional["AVLNode[KT, VT]"] = None,
+        left: AVLNode[KT, VT] | None = None,
+        right: AVLNode[KT, VT] | None = None,
+        parent: AVLNode[KT, VT] | None = None,
     ) -> None:
         super().__init__(key, value, left=left, right=right, parent=parent)
         self.height: int = 1
@@ -159,12 +159,12 @@ class RBNode(TreeNode[KT, VT]):
     def __init__(
         self,
         key: KT,
-        value: Optional[VT] = None,
+        value: VT | None = None,
         *,
         color: int = RED,
-        left: Optional["RBNode[KT, VT]"] = None,
-        right: Optional["RBNode[KT, VT]"] = None,
-        parent: Optional["RBNode[KT, VT]"] = None,
+        left: RBNode[KT, VT] | None = None,
+        right: RBNode[KT, VT] | None = None,
+        parent: RBNode[KT, VT] | None = None,
     ) -> None:
         super().__init__(key, value, left=left, right=right, parent=parent)
         self.color: int = color
@@ -203,10 +203,10 @@ class BTreeNode(Generic[KT, VT]):
     __slots__ = ("keys", "values", "children", "parent")
 
     def __init__(self) -> None:
-        self.keys: List[KT] = []
-        self.values: List[Optional[VT]] = []
-        self.children: List["BTreeNode[KT, VT]"] = []
-        self.parent: Optional["BTreeNode[KT, VT]"] = None
+        self.keys: list[KT] = []
+        self.values: list[VT | None] = []
+        self.children: list[BTreeNode[KT, VT]] = []
+        self.parent: BTreeNode[KT, VT] | None = None
 
     def is_leaf(self) -> bool:
         """Return *True* when this node has no children."""
@@ -247,11 +247,11 @@ class BPlusNode(Generic[KT, VT]):
     __slots__ = ("keys", "values", "children", "parent", "next_leaf", "is_leaf")
 
     def __init__(self, *, is_leaf: bool = False) -> None:
-        self.keys: List[KT] = []
-        self.values: List[Optional[VT]] = []           # leaf only
-        self.children: List["BPlusNode[KT, VT]"] = []  # internal only
-        self.parent: Optional["BPlusNode[KT, VT]"] = None
-        self.next_leaf: Optional["BPlusNode[KT, VT]"] = None  # leaf only
+        self.keys: list[KT] = []
+        self.values: list[VT | None] = []           # leaf only
+        self.children: list[BPlusNode[KT, VT]] = []  # internal only
+        self.parent: BPlusNode[KT, VT] | None = None
+        self.next_leaf: BPlusNode[KT, VT] | None = None  # leaf only
         self.is_leaf: bool = is_leaf
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -293,14 +293,14 @@ class SegmentNode:
         start: int,
         end: int,
         value: Any = 0,
-        lazy: Optional[Any] = None,
+        lazy: Any | None = None,
     ) -> None:
         self.start: int = start
         self.end: int = end
         self.value: Any = value
-        self.lazy: Optional[Any] = lazy
-        self.left: Optional["SegmentNode"] = None
-        self.right: Optional["SegmentNode"] = None
+        self.lazy: Any | None = lazy
+        self.left: SegmentNode | None = None
+        self.right: SegmentNode | None = None
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -338,11 +338,11 @@ class IntervalNode(TreeNode[KT, VT]):
         self,
         lo: KT,
         hi: KT,
-        value: Optional[VT] = None,
+        value: VT | None = None,
         *,
-        left: Optional["IntervalNode[KT, VT]"] = None,
-        right: Optional["IntervalNode[KT, VT]"] = None,
-        parent: Optional["IntervalNode[KT, VT]"] = None,
+        left: IntervalNode[KT, VT] | None = None,
+        right: IntervalNode[KT, VT] | None = None,
+        parent: IntervalNode[KT, VT] | None = None,
     ) -> None:
         super().__init__(lo, value, left=left, right=right, parent=parent)
         self.lo: KT = lo

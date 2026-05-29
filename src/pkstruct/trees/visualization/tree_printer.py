@@ -10,7 +10,7 @@ Provides a unified ``TreeVisualizer`` class with ``visualize()`` and
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from .ascii_renderer import AsciiRenderer
 
@@ -21,10 +21,10 @@ class TreeVisualizer:
     # Lazy imports to avoid circular dependencies at module load time.
     @staticmethod
     def _tree_types() -> tuple[type, ...]:
-        from pkstruct.trees.bst import BinarySearchTree
         from pkstruct.trees.avl import AVLTree
-        from pkstruct.trees.red_black import RedBlackTree
+        from pkstruct.trees.bst import BinarySearchTree
         from pkstruct.trees.interval_tree import IntervalTree
+        from pkstruct.trees.red_black import RedBlackTree
 
         return (BinarySearchTree, AVLTree, RedBlackTree, IntervalTree)
 

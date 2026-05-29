@@ -1,9 +1,11 @@
 """Benchmarking utilities for pkstruct linked list classes."""
 from __future__ import annotations
 
-import time
 import collections
+import time
 from typing import Any
+
+from pkstruct.linear import CircularLinkedList, DoublyLinkedList, SinglyLinkedList
 
 
 def _timeit(fn, *args, **kwargs) -> float:
@@ -123,9 +125,9 @@ def compare_with_builtins(sizes: list[int] | None = None, n: int | None = None) 
     if sizes is None:
         sizes = [100, 1000]
 
-    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
-    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
     from pkstruct.linear.linked_lists.circular_linked_list import CircularLinkedList
+    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
+    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
 
     pkstruct_classes = [SinglyLinkedList, DoublyLinkedList, CircularLinkedList]
 

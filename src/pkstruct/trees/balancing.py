@@ -16,8 +16,6 @@ Design goals
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from .node import AVLNode, RBNode, TreeNode
 
 __all__ = [
@@ -28,7 +26,7 @@ __all__ = [
     "validate_balance",
 ]
 
-_AnyNode = Union[AVLNode, RBNode, TreeNode]
+_AnyNode = AVLNode | RBNode | TreeNode
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +34,7 @@ _AnyNode = Union[AVLNode, RBNode, TreeNode]
 # ---------------------------------------------------------------------------
 
 
-def _height(node: Optional[AVLNode]) -> int:
+def _height(node: AVLNode | None) -> int:
     """Return the height of *node*, or 0 if *None*."""
     return node.height if node is not None else 0
 
@@ -54,7 +52,7 @@ def _update_height(node: AVLNode) -> None:
 def rotate(
     node: _AnyNode,
     direction: str,
-    root: Optional[_AnyNode] = None,
+    root: _AnyNode | None = None,
 ) -> _AnyNode:
     """
     Perform a single rotation on *node* and return the new sub-tree root.
@@ -151,7 +149,7 @@ def update_metadata(node: _AnyNode) -> None:
 # ---------------------------------------------------------------------------
 
 
-def get_balance_factor(node: Optional[AVLNode]) -> int:  # type: ignore[return]
+def get_balance_factor(node: AVLNode | None) -> int:  # type: ignore[return]
     """
     Return the balance factor of *node* (left height − right height).
 
@@ -230,7 +228,7 @@ def rebalance(node: AVLNode, strategy: str = "avl") -> AVLNode:
 # ---------------------------------------------------------------------------
 
 
-def validate_balance(root: Optional[AVLNode]) -> bool:
+def validate_balance(root: AVLNode | None) -> bool:
     """
     Recursively verify that every node satisfies the AVL balance property.
 
@@ -245,7 +243,7 @@ def validate_balance(root: Optional[AVLNode]) -> bool:
         *True* when every node has ``|balance_factor| <= 1``.
     """
 
-    def _check(node: Optional[AVLNode]) -> bool:
+    def _check(node: AVLNode | None) -> bool:
         if node is None:
             return True
         if abs(get_balance_factor(node)) > 1:

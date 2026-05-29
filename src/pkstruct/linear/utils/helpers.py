@@ -1,12 +1,13 @@
 """Helper utilities for pkstruct linked lists."""
 from __future__ import annotations
-from typing import Any, Optional
+
+from typing import Any
 
 
 def _get_list_types() -> tuple[type, type, type]:
-    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
-    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
     from pkstruct.linear.linked_lists.circular_linked_list import CircularLinkedList
+    from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
+    from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
     return SinglyLinkedList, DoublyLinkedList, CircularLinkedList
 
 
@@ -66,7 +67,7 @@ def merge_sorted_lists(*lists: Any) -> Any:
     return SinglyLinkedList.from_list(all_values)
 
 
-def detect_intersection(list_a: Any, list_b: Any) -> Optional[Any]:
+def detect_intersection(list_a: Any, list_b: Any) -> Any | None:
     """Detect whether two linked lists share a common node by identity.
 
     Uses a hash-set approach on node ids to find the first node that

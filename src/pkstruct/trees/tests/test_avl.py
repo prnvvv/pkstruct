@@ -7,8 +7,8 @@ Comprehensive tests for AVLTree.
 from __future__ import annotations
 
 import pytest
-from pkstruct.trees.avl import AVLTree
 
+from pkstruct.trees.avl import AVLTree
 
 # ---------------------------------------------------------------------------
 # Helpers

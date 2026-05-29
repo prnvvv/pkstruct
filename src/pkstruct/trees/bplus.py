@@ -46,7 +46,8 @@ Space         O(n)
 
 from __future__ import annotations
 
-from typing import Any, Iterator, List, Optional
+from collections.abc import Iterator
+from typing import Any
 
 from pkstruct.trees.exceptions import (
     DuplicateKeyError,
@@ -215,7 +216,7 @@ class BPlusTree:
         leaf.values.pop(idx)
         self._size -= 1
 
-    def search(self, key: Any) -> Optional[Any]:
+    def search(self, key: Any) -> Any | None:
         """Return the value associated with *key*, or *None* if absent."""
         leaf = self._find_leaf(self._root, key)
         if key in leaf.keys:
@@ -291,7 +292,7 @@ class BPlusTree:
     # Leaf traversal
     # ------------------------------------------------------------------
 
-    def leaf_traversal(self) -> List[Any]:
+    def leaf_traversal(self) -> list[Any]:
         """Traverse all leaves via the leaf-linked chain.
 
         Returns
@@ -299,7 +300,7 @@ class BPlusTree:
         list
             All keys in sorted order by walking the leaf chain.
         """
-        result: List[Any] = []
+        result: list[Any] = []
         leaf = self._first_leaf
         while leaf is not None:
             result.extend(leaf.keys)
@@ -310,7 +311,7 @@ class BPlusTree:
     # Range query
     # ------------------------------------------------------------------
 
-    def range_query(self, lo: Any, hi: Any) -> List[Any]:
+    def range_query(self, lo: Any, hi: Any) -> list[Any]:
         """Return all keys in [*lo*, *hi*] using the leaf chain.
 
         Parameters
@@ -325,7 +326,7 @@ class BPlusTree:
         list
             Sorted keys within the range.
         """
-        result: List[Any] = []
+        result: list[Any] = []
         leaf = self._find_leaf(self._root, lo)
         while leaf is not None:
             for k in leaf.keys:
@@ -364,11 +365,11 @@ class BPlusTree:
 
     def _validate(
         self,
-        node: Optional[BPlusNode],
+        node: BPlusNode | None,
         lo: Any,
         hi: Any,
         depth: int,
-        leaf_depths: List[int],
+        leaf_depths: list[int],
     ) -> None:
         if node is None:
             return

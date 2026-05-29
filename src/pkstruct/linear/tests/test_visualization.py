@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import pytest
+
 from pkstruct.linear import (
-    SinglyLinkedList,
-    DoublyLinkedList,
     CircularLinkedList,
+    DoublyLinkedList,
+    SinglyLinkedList,
 )
 
 LIST_CLASSES = [SinglyLinkedList, DoublyLinkedList, CircularLinkedList]

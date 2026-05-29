@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
-import pytest
 import threading
+
+import pytest
+
 from pkstruct.linear import (
-    SinglyLinkedList,
-    DoublyLinkedList,
     CircularLinkedList,
+    DoublyLinkedList,
+    SinglyLinkedList,
 )
 from pkstruct.linear.exceptions import (
     EmptyStructureError,
     IndexOutOfRangeError,
-    ValueNotFoundError,
     InvalidRangeError,
+    SerializationError,
+    ValueNotFoundError,
 )
 
 LIST_CLASSES = [SinglyLinkedList, DoublyLinkedList, CircularLinkedList]
@@ -39,7 +42,7 @@ class TestEdgeCases:
     def test_empty_list_rotate_raises(self, ListClass):
         lst = ListClass()
         with pytest.raises(EmptyStructureError):
-            lst.rotate(0, 0, True, 1)
+            lst.rotate()
 
     def test_single_element_operations(self, ListClass):
         lst = ListClass.from_list([42])
@@ -151,7 +154,7 @@ class TestSerialization:
         assert restored.to_list() == []
 
     def test_invalid_json_raises(self, ListClass):
-        with pytest.raises(Exception):
+        with pytest.raises(SerializationError):
             ListClass.from_json("invalid json")
 
 
