@@ -7,6 +7,9 @@ comprehensive algorithmic helpers.
 
 Modules
 -------
+trees
+    BinarySearchTree, AVLTree, RedBlackTree, BTree, BPlusTree,
+    SegmentTree, FenwickTree, IntervalTree
 linear
     SinglyLinkedList, DoublyLinkedList, CircularLinkedList
 shared
@@ -14,12 +17,13 @@ shared
 
 Example
 -------
->>> from pkstruct import SinglyLinkedList
->>> ll = SinglyLinkedList.from_list([1, 2, 3])
->>> ll.insert(4)
->>> ll.reverse()
->>> list(ll)
-[4, 3, 2, 1]
+>>> from pkstruct import BinarySearchTree
+>>> bst = BinarySearchTree()
+>>> bst.insert(10)
+>>> bst.insert(5)
+>>> bst.insert(15)
+>>> list(bst)
+[5, 10, 15]
 """
 
 from pkstruct.linear import (
@@ -36,7 +40,29 @@ from pkstruct.linear import (
     InvalidRangeError,
 )
 
+from pkstruct.trees import (
+    AVLTree,
+    BinarySearchTree,
+    BPlusTree,
+    BTree,
+    FenwickTree,
+    IntervalTree,
+    RedBlackTree,
+    SegmentTree,
+    TreeError,
+    KeyNotFoundError,
+    DuplicateKeyError,
+    EmptyTreeError,
+    InvalidOrderError,
+    InvalidOperationError,
+    TreeBalanceError,
+    SerializationError as TreeSerializationError,
+    InvalidIntervalError,
+    IndexOutOfBoundsError,
+)
+
 __all__ = [
+    # Linear
     "SinglyLinkedList",
     "DoublyLinkedList",
     "CircularLinkedList",
@@ -48,6 +74,25 @@ __all__ = [
     "SerializationError",
     "ConcurrencyError",
     "InvalidRangeError",
+    # Trees
+    "BinarySearchTree",
+    "AVLTree",
+    "RedBlackTree",
+    "BTree",
+    "BPlusTree",
+    "SegmentTree",
+    "FenwickTree",
+    "IntervalTree",
+    "TreeError",
+    "KeyNotFoundError",
+    "DuplicateKeyError",
+    "EmptyTreeError",
+    "InvalidOrderError",
+    "InvalidOperationError",
+    "TreeBalanceError",
+    "TreeSerializationError",
+    "InvalidIntervalError",
+    "IndexOutOfBoundsError",
 ]
 
 __version__ = "0.1.0"
