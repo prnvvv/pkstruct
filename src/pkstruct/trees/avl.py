@@ -95,9 +95,10 @@ class AVLTree(BinarySearchTree):
         ValueError
             If ``allow_duplicates=True`` and the key already exists.
         """
-        self._root, inserted = self._avl_insert(self._root, key, value)
-        if inserted:
-            self._size += 1
+        with self._lock:
+            self._root, inserted = self._avl_insert(self._root, key, value)
+            if inserted:
+                self._size += 1
 
     def _avl_insert(
         self,
@@ -136,10 +137,11 @@ class AVLTree(BinarySearchTree):
         KeyError
             If *key* is not present.
         """
-        self._root, deleted = self._avl_delete(self._root, key)
-        if not deleted:
-            raise KeyError(key)
-        self._size -= 1
+        with self._lock:
+            self._root, deleted = self._avl_delete(self._root, key)
+            if not deleted:
+                raise KeyError(key)
+            self._size -= 1
 
     def _avl_delete(
         self,
@@ -190,8 +192,9 @@ class AVLTree(BinarySearchTree):
         AVLNode
             The new subtree root after rotations.
         """
-        update_metadata(node)
-        return rebalance(node, strategy="avl")
+        with self._lock:
+            update_metadata(node)
+            return rebalance(node, strategy="avl")
 
     def is_avl_valid(self) -> bool:
         """Return *True* if the tree satisfies both the BST and AVL properties.
@@ -201,11 +204,12 @@ class AVLTree(BinarySearchTree):
           2. Balance factor ≤ 1 at every node (via ``balancing.validate_balance``).
           3. Stored height metadata is consistent.
         """
-        if not self._validate(self._root, None, None):
-            return False
-        if self._root is None:
-            return True
-        return validate_balance(self._root) and self._check_heights(self._root)
+        with self._lock:
+            if not self._validate(self._root, None, None):
+                return False
+            if self._root is None:
+                return True
+            return validate_balance(self._root) and self._check_heights(self._root)
 
     def _check_heights(self, node: AVLNode | None) -> bool:
         """Verify stored height values are consistent with tree structure."""
@@ -229,6 +233,8 @@ class AVLTree(BinarySearchTree):
         """
         return self.is_avl_valid()
 
+    # is_avl_valid already wraps with lock
+
     def balance_factor(self, key: Any) -> int:
         """Return the balance factor (left_height - right_height) for *key*'s node.
 
@@ -242,10 +248,11 @@ class AVLTree(BinarySearchTree):
         KeyError
             If *key* is not in the tree.
         """
-        node = self._find(self._root, key)
-        if node is None:
-            raise KeyError(key)
-        return get_balance_factor(node)
+        with self._lock:
+            node = self._find(self._root, key)
+            if node is None:
+                raise KeyError(key)
+            return get_balance_factor(node)
 
     # ------------------------------------------------------------------
     # Serialization override: create AVLNodes instead of plain TreeNodes
@@ -253,45 +260,47 @@ class AVLTree(BinarySearchTree):
 
     def serialize(self) -> str:
         """Serialize the tree to a JSON string (level-order with null sentinels)."""
-        if self._root is None:
-            return "[]"
-        result: list[Any | None] = []
-        q: collections.deque[AVLNode | None] = collections.deque([self._root])
-        while q:
-            node = q.popleft()
-            if node is None:
-                result.append(None)
-            else:
-                result.append(node.key)
-                q.append(node.left)
-                q.append(node.right)
-        while result and result[-1] is None:
-            result.pop()
-        return json.dumps(result)
+        with self._lock:
+            if self._root is None:
+                return "[]"
+            result: list[Any | None] = []
+            q: collections.deque[AVLNode | None] = collections.deque([self._root])
+            while q:
+                node = q.popleft()
+                if node is None:
+                    result.append(None)
+                else:
+                    result.append(node.key)
+                    q.append(node.left)
+                    q.append(node.right)
+            while result and result[-1] is None:
+                result.pop()
+            return json.dumps(result)
 
     def deserialize(self, data: str) -> None:
         """Rebuild the tree from a JSON string, creating AVLNodes."""
-        self.clear()
-        keys: list[Any | None] = json.loads(data)
-        if not keys:
-            return
-        self._root = AVLNode(keys[0])
-        self._size = 1
-        q: collections.deque[AVLNode] = collections.deque([self._root])
-        i = 1
-        while q and i < len(keys):
-            node = q.popleft()
-            if i < len(keys) and keys[i] is not None:
-                node.left = AVLNode(keys[i])
-                self._size += 1
-                q.append(node.left)
-            i += 1
-            if i < len(keys) and keys[i] is not None:
-                node.right = AVLNode(keys[i])
-                self._size += 1
-                q.append(node.right)
-            i += 1
-        self._fix_heights(self._root)
+        with self._lock:
+            self.clear()
+            keys: list[Any | None] = json.loads(data)
+            if not keys:
+                return
+            self._root = AVLNode(keys[0])
+            self._size = 1
+            q: collections.deque[AVLNode] = collections.deque([self._root])
+            i = 1
+            while q and i < len(keys):
+                node = q.popleft()
+                if i < len(keys) and keys[i] is not None:
+                    node.left = AVLNode(keys[i])
+                    self._size += 1
+                    q.append(node.left)
+                i += 1
+                if i < len(keys) and keys[i] is not None:
+                    node.right = AVLNode(keys[i])
+                    self._size += 1
+                    q.append(node.right)
+                i += 1
+            self._fix_heights(self._root)
 
     def _fix_heights(self, node: AVLNode | None) -> None:
         """Post-order traversal to recalculate heights after deserialization."""
@@ -306,6 +315,7 @@ class AVLTree(BinarySearchTree):
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:  # pragma: no cover
-        keys = list(self._traverse("inorder"))
-        h = self.height()
-        return f"AVLTree(size={self._size}, height={h}, keys={keys})"
+        with self._lock:
+            keys = list(self._traverse("inorder"))
+            h = self.height()
+            return f"AVLTree(size={self._size}, height={h}, keys={keys})"

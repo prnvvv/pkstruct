@@ -58,6 +58,7 @@ from __future__ import annotations
 from collections.abc import Generator, Iterator
 from typing import Any
 
+from pkstruct.shared.threading import StructureLock
 from pkstruct.trees.balancing import rotate
 from pkstruct.trees.node import RBNode
 
@@ -98,6 +99,7 @@ class RedBlackTree:
         self._root: RBNode = _NIL
         self._size: int = 0
         self._allow_duplicates = allow_duplicates
+        self._lock: StructureLock = StructureLock()
 
     # ------------------------------------------------------------------
     # Core CRUD
@@ -118,36 +120,37 @@ class RedBlackTree:
         ValueError
             If ``allow_duplicates=True`` and *key* already exists.
         """
-        existing = self._find(self._root, key)
-        if not _is_nil(existing):
-            if self._allow_duplicates:
-                raise ValueError(f"Duplicate key: {key!r}")
-            existing.value = value
-            return
+        with self._lock:
+            existing = self._find(self._root, key)
+            if not _is_nil(existing):
+                if self._allow_duplicates:
+                    raise ValueError(f"Duplicate key: {key!r}")
+                existing.value = value
+                return
 
-        new_node = RBNode(key, value)
-        new_node.color = RED
-        new_node.left = _NIL
-        new_node.right = _NIL
-        new_node.parent = _NIL
+            new_node = RBNode(key, value)
+            new_node.color = RED
+            new_node.left = _NIL
+            new_node.right = _NIL
+            new_node.parent = _NIL
 
-        # Standard BST insert
-        parent: RBNode = _NIL
-        current: RBNode = self._root
-        while not _is_nil(current):
-            parent = current
-            current = current.left if key < current.key else current.right
+            # Standard BST insert
+            parent: RBNode = _NIL
+            current: RBNode = self._root
+            while not _is_nil(current):
+                parent = current
+                current = current.left if key < current.key else current.right
 
-        new_node.parent = parent
-        if _is_nil(parent):
-            self._root = new_node
-        elif key < parent.key:
-            parent.left = new_node
-        else:
-            parent.right = new_node
+            new_node.parent = parent
+            if _is_nil(parent):
+                self._root = new_node
+            elif key < parent.key:
+                parent.left = new_node
+            else:
+                parent.right = new_node
 
-        self._size += 1
-        self.fix_insert(new_node)
+            self._size += 1
+            self.fix_insert(new_node)
 
     def fix_insert(self, node: RBNode) -> None:
         """Restore Red-Black properties after a standard BST insert.
@@ -234,11 +237,12 @@ class RedBlackTree:
         KeyError
             If *key* is not present.
         """
-        target = self._find(self._root, key)
-        if _is_nil(target):
-            raise KeyError(key)
-        self._rb_delete(target)
-        self._size -= 1
+        with self._lock:
+            target = self._find(self._root, key)
+            if _is_nil(target):
+                raise KeyError(key)
+            self._rb_delete(target)
+            self._size -= 1
 
     def _rb_delete(self, z: RBNode) -> None:
         """Standard Cormen RB-delete on node *z*."""
@@ -388,12 +392,14 @@ class RedBlackTree:
         key:
             Key to look up.
         """
-        node = self._find(self._root, key)
-        return node.value if not _is_nil(node) else None
+        with self._lock:
+            node = self._find(self._root, key)
+            return node.value if not _is_nil(node) else None
 
     def contains(self, key: Any) -> bool:
         """Return *True* if *key* is present."""
-        return not _is_nil(self._find(self._root, key))
+        with self._lock:
+            return not _is_nil(self._find(self._root, key))
 
     def update(self, key: Any, value: Any) -> None:
         """Update the value of an existing *key*.
@@ -410,15 +416,17 @@ class RedBlackTree:
         KeyError
             If *key* does not exist.
         """
-        node = self._find(self._root, key)
-        if _is_nil(node):
-            raise KeyError(key)
-        node.value = value
+        with self._lock:
+            node = self._find(self._root, key)
+            if _is_nil(node):
+                raise KeyError(key)
+            node.value = value
 
     def clear(self) -> None:
         """Remove all nodes from the tree."""
-        self._root = _NIL
-        self._size = 0
+        with self._lock:
+            self._root = _NIL
+            self._size = 0
 
     # ------------------------------------------------------------------
     # Metrics
@@ -426,15 +434,18 @@ class RedBlackTree:
 
     def size(self) -> int:
         """Return the number of stored nodes."""
-        return self._size
+        with self._lock:
+            return self._size
 
     def is_empty(self) -> bool:
         """Return *True* if the tree is empty."""
-        return _is_nil(self._root)
+        with self._lock:
+            return _is_nil(self._root)
 
     def height(self) -> int:
         """Return the tree height (-1 for empty, 0 for a single node)."""
-        return self._height(self._root)
+        with self._lock:
+            return self._height(self._root)
 
     def _height(self, node: RBNode | None) -> int:
         if _is_nil(node):
@@ -449,9 +460,10 @@ class RedBlackTree:
         ValueError
             If the tree is empty.
         """
-        if _is_nil(self._root):
-            raise ValueError("Tree is empty")
-        return self._min_node(self._root).key
+        with self._lock:
+            if _is_nil(self._root):
+                raise ValueError("Tree is empty")
+            return self._min_node(self._root).key
 
     def max(self) -> Any:
         """Return the maximum key.
@@ -461,9 +473,10 @@ class RedBlackTree:
         ValueError
             If the tree is empty.
         """
-        if _is_nil(self._root):
-            raise ValueError("Tree is empty")
-        return self._max_node(self._root).key
+        with self._lock:
+            if _is_nil(self._root):
+                raise ValueError("Tree is empty")
+            return self._max_node(self._root).key
 
     def black_height(self) -> int:
         """Return the black-height of the tree.
@@ -477,7 +490,8 @@ class RedBlackTree:
         int
             Black-height ≥ 0.  Returns 0 for an empty tree.
         """
-        return self._black_height(self._root)
+        with self._lock:
+            return self._black_height(self._root)
 
     def _black_height(self, node: RBNode | None) -> int:
         if _is_nil(node):
@@ -498,21 +512,22 @@ class RedBlackTree:
         KeyError
             If *key* is not in the tree.
         """
-        if not self.contains(key):
-            raise KeyError(key)
-        pred: RBNode | None = None
-        node: RBNode = self._root
-        while not _is_nil(node):
-            if key < node.key:
-                node = node.left
-            elif key > node.key:
-                pred = node
-                node = node.right
-            else:
-                if not _is_nil(node.left):
-                    pred = self._max_node(node.left)
-                break
-        return pred.key if pred is not None and not _is_nil(pred) else None
+        with self._lock:
+            if not self.contains(key):
+                raise KeyError(key)
+            pred: RBNode | None = None
+            node: RBNode = self._root
+            while not _is_nil(node):
+                if key < node.key:
+                    node = node.left
+                elif key > node.key:
+                    pred = node
+                    node = node.right
+                else:
+                    if not _is_nil(node.left):
+                        pred = self._max_node(node.left)
+                    break
+            return pred.key if pred is not None and not _is_nil(pred) else None
 
     def successor(self, key: Any) -> Any | None:
         """Return the in-order successor key, or *None*.
@@ -522,21 +537,22 @@ class RedBlackTree:
         KeyError
             If *key* is not in the tree.
         """
-        if not self.contains(key):
-            raise KeyError(key)
-        succ: RBNode | None = None
-        node: RBNode = self._root
-        while not _is_nil(node):
-            if key > node.key:
-                node = node.right
-            elif key < node.key:
-                succ = node
-                node = node.left
-            else:
-                if not _is_nil(node.right):
-                    succ = self._min_node(node.right)
-                break
-        return succ.key if succ is not None and not _is_nil(succ) else None
+        with self._lock:
+            if not self.contains(key):
+                raise KeyError(key)
+            succ: RBNode | None = None
+            node: RBNode = self._root
+            while not _is_nil(node):
+                if key > node.key:
+                    node = node.right
+                elif key < node.key:
+                    succ = node
+                    node = node.left
+                else:
+                    if not _is_nil(node.right):
+                        succ = self._min_node(node.right)
+                    break
+            return succ.key if succ is not None and not _is_nil(succ) else None
 
     # ------------------------------------------------------------------
     # Validation
@@ -551,16 +567,17 @@ class RedBlackTree:
           3. All root-to-NIL paths have the same black-height.
           4. BST ordering is correct.
         """
-        if _is_nil(self._root):
-            return True
-        if self._root.color != BLACK:
-            return False
-        if not self._check_no_red_red(self._root):
-            return False
-        bh = [None]
-        if not self._check_black_height(self._root, 0, bh):
-            return False
-        return self._check_bst_order(self._root, None, None)
+        with self._lock:
+            if _is_nil(self._root):
+                return True
+            if self._root.color != BLACK:
+                return False
+            if not self._check_no_red_red(self._root):
+                return False
+            bh = [None]
+            if not self._check_black_height(self._root, 0, bh):
+                return False
+            return self._check_bst_order(self._root, None, None)
 
     def validate(self) -> bool:
         """Alias for :meth:`is_red_black_valid`."""
@@ -569,9 +586,10 @@ class RedBlackTree:
     def _check_no_red_red(self, node: RBNode | None) -> bool:
         if _is_nil(node):
             return True
-        if node.color == RED and ((not _is_nil(node.left) and node.left.color == RED) or (
-            not _is_nil(node.right) and node.right.color == RED
-        )):
+        if node.color == RED and (
+            (not _is_nil(node.left) and node.left.color == RED)
+            or (not _is_nil(node.right) and node.right.color == RED)
+        ):
             return False
         return self._check_no_red_red(node.left) and self._check_no_red_red(node.right)
 
@@ -612,10 +630,11 @@ class RedBlackTree:
 
     def copy(self) -> RedBlackTree:
         """Return a deep copy of this tree (new nodes, same key/value/color)."""
-        new_tree = RedBlackTree(allow_duplicates=self._allow_duplicates)
-        new_tree._root = self._copy_node(self._root, _NIL)
-        new_tree._size = self._size
-        return new_tree
+        with self._lock:
+            new_tree = RedBlackTree(allow_duplicates=self._allow_duplicates)
+            new_tree._root = self._copy_node(self._root, _NIL)
+            new_tree._size = self._size
+            return new_tree
 
     def _copy_node(
         self,
@@ -672,7 +691,7 @@ class RedBlackTree:
 
     def __len__(self) -> int:
         """Return the number of nodes in the tree."""
-        return self._size
+        return self.size()
 
     def __contains__(self, key: Any) -> bool:
         """Support ``key in tree`` syntax."""
@@ -680,9 +699,12 @@ class RedBlackTree:
 
     def __iter__(self) -> Iterator[Any]:
         """Iterate over keys in ascending (in-order) order."""
-        return self._inorder(self._root)
+        with self._lock:
+            keys = list(self._inorder(self._root))
+        return iter(keys)
 
     def __repr__(self) -> str:  # pragma: no cover
-        keys = list(self._inorder(self._root))
-        bh = self.black_height()
-        return f"RedBlackTree(size={self._size}, black_height={bh}, keys={keys})"
+        with self._lock:
+            keys = list(self._inorder(self._root))
+            bh = self.black_height()
+            return f"RedBlackTree(size={self._size}, black_height={bh}, keys={keys})"

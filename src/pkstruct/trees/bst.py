@@ -50,6 +50,7 @@ import json
 from collections.abc import Generator, Iterator
 from typing import Any
 
+from pkstruct.shared.threading import StructureLock
 from pkstruct.trees.node import TreeNode
 
 
@@ -71,6 +72,7 @@ class BinarySearchTree:
         self._root: TreeNode | None = None
         self._size: int = 0
         self._allow_duplicates = allow_duplicates
+        self._lock: StructureLock = StructureLock()
 
     # ------------------------------------------------------------------
     # Core CRUD
@@ -94,9 +96,10 @@ class BinarySearchTree:
         ValueError
             If ``allow_duplicates=True`` and *key* already exists.
         """
-        self._root, inserted = self._insert(self._root, key, value)
-        if inserted:
-            self._size += 1
+        with self._lock:
+            self._root, inserted = self._insert(self._root, key, value)
+            if inserted:
+                self._size += 1
 
     def _insert(
         self,
@@ -138,10 +141,11 @@ class BinarySearchTree:
         KeyError
             If *key* is not found.
         """
-        self._root, deleted = self._delete(self._root, key)
-        if not deleted:
-            raise KeyError(key)
-        self._size -= 1
+        with self._lock:
+            self._root, deleted = self._delete(self._root, key)
+            if not deleted:
+                raise KeyError(key)
+            self._size -= 1
 
     def _delete(
         self,
@@ -179,12 +183,14 @@ class BinarySearchTree:
         -------
         Any or None
         """
-        node = self._find(self._root, key)
-        return node.value if node is not None else None
+        with self._lock:
+            node = self._find(self._root, key)
+            return node.value if node is not None else None
 
     def contains(self, key: Any) -> bool:
         """Return *True* if *key* is present in the tree."""
-        return self._find(self._root, key) is not None
+        with self._lock:
+            return self._find(self._root, key) is not None
 
     def update(self, key: Any, value: Any) -> None:
         """Update the value of an existing *key*.
@@ -201,15 +207,17 @@ class BinarySearchTree:
         KeyError
             If *key* does not exist.
         """
-        node = self._find(self._root, key)
-        if node is None:
-            raise KeyError(key)
-        node.value = value
+        with self._lock:
+            node = self._find(self._root, key)
+            if node is None:
+                raise KeyError(key)
+            node.value = value
 
     def clear(self) -> None:
         """Remove all nodes from the tree."""
-        self._root = None
-        self._size = 0
+        with self._lock:
+            self._root = None
+            self._size = 0
 
     # ------------------------------------------------------------------
     # Metrics
@@ -217,15 +225,18 @@ class BinarySearchTree:
 
     def size(self) -> int:
         """Return the number of nodes currently in the tree."""
-        return self._size
+        with self._lock:
+            return self._size
 
     def height(self) -> int:
         """Return the height of the tree (0 for a single-node tree, -1 if empty)."""
-        return self._height(self._root)
+        with self._lock:
+            return self._height(self._root)
 
     def is_empty(self) -> bool:
         """Return *True* if the tree contains no nodes."""
-        return self._root is None
+        with self._lock:
+            return self._root is None
 
     def min(self) -> Any:
         """Return the minimum key.
@@ -235,9 +246,10 @@ class BinarySearchTree:
         ValueError
             If the tree is empty.
         """
-        if self._root is None:
-            raise ValueError("Tree is empty")
-        return self._min_node(self._root).key
+        with self._lock:
+            if self._root is None:
+                raise ValueError("Tree is empty")
+            return self._min_node(self._root).key
 
     def max(self) -> Any:
         """Return the maximum key.
@@ -247,14 +259,16 @@ class BinarySearchTree:
         ValueError
             If the tree is empty.
         """
-        if self._root is None:
-            raise ValueError("Tree is empty")
-        return self._max_node(self._root).key
+        with self._lock:
+            if self._root is None:
+                raise ValueError("Tree is empty")
+            return self._max_node(self._root).key
 
     def floor(self, key: Any) -> Any | None:
         """Return the largest key less than or equal to *key*, or *None*."""
-        node = self._floor(self._root, key)
-        return node.key if node is not None else None
+        with self._lock:
+            node = self._floor(self._root, key)
+            return node.key if node is not None else None
 
     def _floor(self, node: TreeNode | None, key: Any) -> TreeNode | None:
         if node is None:
@@ -266,11 +280,6 @@ class BinarySearchTree:
         right = self._floor(node.right, key)
         return right if right is not None else node
 
-    def ceil(self, key: Any) -> Any | None:
-        """Return the smallest key greater than or equal to *key*, or *None*."""
-        node = self._ceil(self._root, key)
-        return node.key if node is not None else None
-
     def _ceil(self, node: TreeNode | None, key: Any) -> TreeNode | None:
         if node is None:
             return None
@@ -280,6 +289,12 @@ class BinarySearchTree:
             return self._ceil(node.right, key)
         left = self._ceil(node.left, key)
         return left if left is not None else node
+
+    def ceil(self, key: Any) -> Any | None:
+        """Return the smallest key greater than or equal to *key*, or *None*."""
+        with self._lock:
+            node = self._ceil(self._root, key)
+            return node.key if node is not None else None
 
     # ------------------------------------------------------------------
     # Navigation
@@ -293,21 +308,22 @@ class BinarySearchTree:
         KeyError
             If *key* is not in the tree.
         """
-        if not self.contains(key):
-            raise KeyError(key)
-        pred: TreeNode | None = None
-        node = self._root
-        while node is not None:
-            if key < node.key:
-                node = node.left
-            elif key > node.key:
-                pred = node
-                node = node.right
-            else:
-                if node.left is not None:
-                    pred = self._max_node(node.left)
-                break
-        return pred.key if pred is not None else None
+        with self._lock:
+            if not self.contains(key):
+                raise KeyError(key)
+            pred: TreeNode | None = None
+            node = self._root
+            while node is not None:
+                if key < node.key:
+                    node = node.left
+                elif key > node.key:
+                    pred = node
+                    node = node.right
+                else:
+                    if node.left is not None:
+                        pred = self._max_node(node.left)
+                    break
+            return pred.key if pred is not None else None
 
     def successor(self, key: Any) -> Any | None:
         """Return the in-order successor key of *key*, or *None*.
@@ -317,21 +333,22 @@ class BinarySearchTree:
         KeyError
             If *key* is not in the tree.
         """
-        if not self.contains(key):
-            raise KeyError(key)
-        succ: TreeNode | None = None
-        node = self._root
-        while node is not None:
-            if key > node.key:
-                node = node.right
-            elif key < node.key:
-                succ = node
-                node = node.left
-            else:
-                if node.right is not None:
-                    succ = self._min_node(node.right)
-                break
-        return succ.key if succ is not None else None
+        with self._lock:
+            if not self.contains(key):
+                raise KeyError(key)
+            succ: TreeNode | None = None
+            node = self._root
+            while node is not None:
+                if key > node.key:
+                    node = node.right
+                elif key < node.key:
+                    succ = node
+                    node = node.left
+                else:
+                    if node.right is not None:
+                        succ = self._min_node(node.right)
+                    break
+            return succ.key if succ is not None else None
 
     # ------------------------------------------------------------------
     # Structural utilities
@@ -345,7 +362,8 @@ class BinarySearchTree:
         bool
             *True* if all nodes satisfy the BST property.
         """
-        return self._validate(self._root, None, None)
+        with self._lock:
+            return self._validate(self._root, None, None)
 
     def _validate(
         self,
@@ -359,18 +377,15 @@ class BinarySearchTree:
             return False
         if hi is not None and node.key >= hi:
             return False
-        return self._validate(node.left, lo, node.key) and self._validate(
-            node.right, node.key, hi
-        )
+        return self._validate(node.left, lo, node.key) and self._validate(node.right, node.key, hi)
 
     def copy(self) -> BinarySearchTree:
         """Return a deep copy of this tree (new nodes, same key/value pairs)."""
-        new_tree: BinarySearchTree = BinarySearchTree(
-            allow_duplicates=self._allow_duplicates
-        )
-        new_tree._root = self._copy_node(self._root)
-        new_tree._size = self._size
-        return new_tree
+        with self._lock:
+            new_tree: BinarySearchTree = BinarySearchTree(allow_duplicates=self._allow_duplicates)
+            new_tree._root = self._copy_node(self._root)
+            new_tree._size = self._size
+            return new_tree
 
     def _copy_node(self, node: TreeNode | None) -> TreeNode | None:
         if node is None:
@@ -382,7 +397,8 @@ class BinarySearchTree:
 
     def invert(self) -> None:
         """Mirror the tree in-place (swap left/right children at every node)."""
-        self._invert(self._root)
+        with self._lock:
+            self._invert(self._root)
 
     def _invert(self, node: TreeNode | None) -> None:
         if node is None:
@@ -393,7 +409,8 @@ class BinarySearchTree:
 
     def is_balanced(self) -> bool:
         """Return *True* if the tree is height-balanced (|left_h - right_h| ≤ 1 for every node)."""
-        return self._check_balanced(self._root) != -2
+        with self._lock:
+            return self._check_balanced(self._root) != -2
 
     def _check_balanced(self, node: TreeNode | None) -> int:
         """Return height if balanced, -2 as sentinel for unbalanced."""
@@ -411,9 +428,10 @@ class BinarySearchTree:
 
     def diameter(self) -> int:
         """Return the diameter (longest path between any two nodes, in edges)."""
-        self._diameter_max: int = 0
-        self._diameter_helper(self._root)
-        return self._diameter_max
+        with self._lock:
+            self._diameter_max: int = 0
+            self._diameter_helper(self._root)
+            return self._diameter_max
 
     def _diameter_helper(self, node: TreeNode | None) -> int:
         if node is None:
@@ -425,20 +443,21 @@ class BinarySearchTree:
 
     def width(self) -> int:
         """Return the maximum width (number of nodes) across all levels."""
-        if self._root is None:
-            return 0
-        max_w = 0
-        queue: collections.deque[TreeNode] = collections.deque([self._root])
-        while queue:
-            level_size = len(queue)
-            max_w = max(max_w, level_size)
-            for _ in range(level_size):
-                node = queue.popleft()
-                if node.left:
-                    queue.append(node.left)
-                if node.right:
-                    queue.append(node.right)
-        return max_w
+        with self._lock:
+            if self._root is None:
+                return 0
+            max_w = 0
+            queue: collections.deque[TreeNode] = collections.deque([self._root])
+            while queue:
+                level_size = len(queue)
+                max_w = max(max_w, level_size)
+                for _ in range(level_size):
+                    node = queue.popleft()
+                    if node.left:
+                        queue.append(node.left)
+                    if node.right:
+                        queue.append(node.right)
+            return max_w
 
     # ------------------------------------------------------------------
     # Interview utilities
@@ -457,11 +476,12 @@ class BinarySearchTree:
         KeyError
             If either key is absent.
         """
-        for k in (key1, key2):
-            if not self.contains(k):
-                raise KeyError(k)
-        node = self._lca(self._root, key1, key2)
-        return node.key if node is not None else None
+        with self._lock:
+            for k in (key1, key2):
+                if not self.contains(k):
+                    raise KeyError(k)
+            node = self._lca(self._root, key1, key2)
+            return node.key if node is not None else None
 
     def _lca(
         self,
@@ -485,11 +505,12 @@ class BinarySearchTree:
         ValueError
             If *k* is out of range.
         """
-        result: list[Any] = []
-        self._inorder_collect(self._root, result, k)
-        if k < 1 or k > len(result):
-            raise ValueError(f"k={k} is out of range [1, {self._size}]")
-        return result[k - 1]
+        with self._lock:
+            result: list[Any] = []
+            self._inorder_collect(self._root, result, k)
+            if k < 1 or k > len(result):
+                raise ValueError(f"k={k} is out of range [1, {self._size}]")
+            return result[k - 1]
 
     def kth_largest(self, k: int) -> Any:
         """Return the k-th largest key (1-indexed).
@@ -499,12 +520,13 @@ class BinarySearchTree:
         ValueError
             If *k* is out of range.
         """
-        if k < 1 or k > self._size:
-            raise ValueError(f"k={k} is out of range [1, {self._size}]")
-        # Reverse in-order (right → root → left)
-        result: list[Any] = []
-        self._reverse_inorder_collect(self._root, result, k)
-        return result[k - 1]
+        with self._lock:
+            if k < 1 or k > self._size:
+                raise ValueError(f"k={k} is out of range [1, {self._size}]")
+            # Reverse in-order (right → root → left)
+            result: list[Any] = []
+            self._reverse_inorder_collect(self._root, result, k)
+            return result[k - 1]
 
     def _reverse_inorder_collect(
         self,
@@ -527,9 +549,10 @@ class BinarySearchTree:
         lo, hi:
             Inclusive lower and upper bounds.
         """
-        result: list[Any] = []
-        self._range_collect(self._root, lo, hi, result)
-        return result
+        with self._lock:
+            result: list[Any] = []
+            self._range_collect(self._root, lo, hi, result)
+            return result
 
     def _range_collect(
         self,
@@ -552,7 +575,8 @@ class BinarySearchTree:
 
         Assumes keys are numeric.
         """
-        return self._path_sum(self._root, target, 0)
+        with self._lock:
+            return self._path_sum(self._root, target, 0)
 
     def _path_sum(
         self,
@@ -571,9 +595,10 @@ class BinarySearchTree:
 
     def root_to_leaf_paths(self) -> list[list[Any]]:
         """Return all root-to-leaf paths as lists of keys."""
-        paths: list[list[Any]] = []
-        self._collect_paths(self._root, [], paths)
-        return paths
+        with self._lock:
+            paths: list[list[Any]] = []
+            self._collect_paths(self._root, [], paths)
+            return paths
 
     def _collect_paths(
         self,
@@ -599,22 +624,23 @@ class BinarySearchTree:
         str
             JSON representation that can be passed to :meth:`deserialize`.
         """
-        if self._root is None:
-            return "[]"
-        result: list[Any | None] = []
-        queue: collections.deque[TreeNode | None] = collections.deque([self._root])
-        while queue:
-            node = queue.popleft()
-            if node is None:
-                result.append(None)
-            else:
-                result.append(node.key)
-                queue.append(node.left)
-                queue.append(node.right)
-        # Trim trailing nulls
-        while result and result[-1] is None:
-            result.pop()
-        return json.dumps(result)
+        with self._lock:
+            if self._root is None:
+                return "[]"
+            result: list[Any | None] = []
+            queue: collections.deque[TreeNode | None] = collections.deque([self._root])
+            while queue:
+                node = queue.popleft()
+                if node is None:
+                    result.append(None)
+                else:
+                    result.append(node.key)
+                    queue.append(node.left)
+                    queue.append(node.right)
+            # Trim trailing nulls
+            while result and result[-1] is None:
+                result.pop()
+            return json.dumps(result)
 
     def deserialize(self, data: str) -> None:
         """Rebuild the tree from a JSON string produced by :meth:`serialize`.
@@ -626,26 +652,27 @@ class BinarySearchTree:
         data:
             JSON string as returned by :meth:`serialize`.
         """
-        self.clear()
-        keys: list[Any | None] = json.loads(data)
-        if not keys:
-            return
-        self._root = TreeNode(keys[0])
-        self._size = 1
-        queue: collections.deque[TreeNode] = collections.deque([self._root])
-        i = 1
-        while queue and i < len(keys):
-            node = queue.popleft()
-            if i < len(keys) and keys[i] is not None:
-                node.left = TreeNode(keys[i])
-                self._size += 1
-                queue.append(node.left)
-            i += 1
-            if i < len(keys) and keys[i] is not None:
-                node.right = TreeNode(keys[i])
-                self._size += 1
-                queue.append(node.right)
-            i += 1
+        with self._lock:
+            self.clear()
+            keys: list[Any | None] = json.loads(data)
+            if not keys:
+                return
+            self._root = TreeNode(keys[0])
+            self._size = 1
+            queue: collections.deque[TreeNode] = collections.deque([self._root])
+            i = 1
+            while queue and i < len(keys):
+                node = queue.popleft()
+                if i < len(keys) and keys[i] is not None:
+                    node.left = TreeNode(keys[i])
+                    self._size += 1
+                    queue.append(node.left)
+                i += 1
+                if i < len(keys) and keys[i] is not None:
+                    node.right = TreeNode(keys[i])
+                    self._size += 1
+                    queue.append(node.right)
+                i += 1
 
     def boundary_traversal(self) -> list[Any]:
         """Return keys in boundary order: left boundary + leaves + right boundary (reversed).
@@ -653,14 +680,60 @@ class BinarySearchTree:
         The result traces the outer edge of the tree anti-clockwise starting
         from the root.
         """
-        if self._root is None:
-            return []
-        result: list[Any] = [self._root.key]
-        self._left_boundary(self._root.left, result)
-        self._leaves(self._root.left, result)
-        self._leaves(self._root.right, result)
-        self._right_boundary(self._root.right, result)
-        return result
+        with self._lock:
+            if self._root is None:
+                return []
+            result: list[Any] = [self._root.key]
+            self._left_boundary(self._root.left, result)
+            self._leaves(self._root.left, result)
+            self._leaves(self._root.right, result)
+            self._right_boundary(self._root.right, result)
+            return result
+
+    def vertical_order(self) -> list[list[Any]]:
+        """Return keys grouped by vertical column, left to right.
+
+        Each inner list contains the keys at the same horizontal distance
+        from the root, sorted top-to-bottom within the column.
+        """
+        with self._lock:
+            if self._root is None:
+                return []
+            col_map: dict[int, list[Any]] = collections.defaultdict(list)
+            queue: collections.deque[tuple[TreeNode, int]] = collections.deque([(self._root, 0)])
+            while queue:
+                node, col = queue.popleft()
+                col_map[col].append(node.key)
+                if node.left:
+                    queue.append((node.left, col - 1))
+                if node.right:
+                    queue.append((node.right, col + 1))
+            return [col_map[c] for c in sorted(col_map)]
+
+    def zigzag_order(self) -> list[list[Any]]:
+        """Return keys level by level, alternating left-to-right and right-to-left."""
+        with self._lock:
+            if self._root is None:
+                return []
+            result: list[list[Any]] = []
+            queue: collections.deque[TreeNode] = collections.deque([self._root])
+            left_to_right = True
+            while queue:
+                level_size = len(queue)
+                level: collections.deque[Any] = collections.deque()
+                for _ in range(level_size):
+                    node = queue.popleft()
+                    if left_to_right:
+                        level.append(node.key)
+                    else:
+                        level.appendleft(node.key)
+                    if node.left:
+                        queue.append(node.left)
+                    if node.right:
+                        queue.append(node.right)
+                result.append(list(level))
+                left_to_right = not left_to_right
+            return result
 
     def _left_boundary(self, node: TreeNode | None, result: list) -> None:
         if node is None or (node.left is None and node.right is None):
@@ -698,9 +771,7 @@ class BinarySearchTree:
         if self._root is None:
             return []
         col_map: dict[int, list[Any]] = collections.defaultdict(list)
-        queue: collections.deque[tuple[TreeNode, int]] = collections.deque(
-            [(self._root, 0)]
-        )
+        queue: collections.deque[tuple[TreeNode, int]] = collections.deque([(self._root, 0)])
         while queue:
             node, col = queue.popleft()
             col_map[col].append(node.key)
@@ -859,7 +930,7 @@ class BinarySearchTree:
 
     def __len__(self) -> int:
         """Return the number of nodes in the tree."""
-        return self._size
+        return self.size()
 
     def __contains__(self, key: Any) -> bool:
         """Support ``key in tree`` syntax."""
@@ -867,8 +938,11 @@ class BinarySearchTree:
 
     def __iter__(self) -> Iterator[Any]:
         """Iterate over keys in ascending (in-order) order."""
-        return self._traverse("inorder")
+        with self._lock:
+            keys = list(self._traverse("inorder"))
+        return iter(keys)
 
     def __repr__(self) -> str:  # pragma: no cover
-        keys = list(self._traverse("inorder"))
-        return f"BinarySearchTree(size={self._size}, keys={keys})"
+        with self._lock:
+            keys = list(self._traverse("inorder"))
+            return f"BinarySearchTree(size={self._size}, keys={keys})"

@@ -43,6 +43,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+from pkstruct.shared.threading import StructureLock
 from pkstruct.trees.exceptions import (
     DuplicateKeyError,
     EmptyTreeError,
@@ -73,6 +74,7 @@ class BTree:
         self._allow_duplicates: bool = allow_duplicates
         self._root: BTreeNode = BTreeNode()
         self._size: int = 0
+        self._lock: StructureLock = StructureLock()
 
     # ------------------------------------------------------------------
     # Properties
@@ -102,27 +104,28 @@ class BTree:
         DuplicateKeyError
             If ``allow_duplicates=True`` and *key* already exists.
         """
-        # Check for duplicate
-        try:
-            existing = self._find(self._root, key)
-            if existing is not None:
-                if self._allow_duplicates:
-                    raise DuplicateKeyError(key)
-                # Update value in-place
-                self._update_value(self._root, key, value)
-                return
-        except KeyNotFoundError:
-            pass
+        with self._lock:
+            # Check for duplicate
+            try:
+                existing = self._find(self._root, key)
+                if existing is not None:
+                    if self._allow_duplicates:
+                        raise DuplicateKeyError(key)
+                    # Update value in-place
+                    self._update_value(self._root, key, value)
+                    return
+            except KeyNotFoundError:
+                pass
 
-        root = self._root
-        if len(root.keys) == 2 * self._order - 1:
-            new_root = BTreeNode()
-            new_root.children.append(root)
-            root.parent = new_root
-            self._split_child(new_root, 0)
-            self._root = new_root
-        self._insert_non_full(self._root, key, value)
-        self._size += 1
+            root = self._root
+            if len(root.keys) == 2 * self._order - 1:
+                new_root = BTreeNode()
+                new_root.children.append(root)
+                root.parent = new_root
+                self._split_child(new_root, 0)
+                self._root = new_root
+            self._insert_non_full(self._root, key, value)
+            self._size += 1
 
     def _insert_non_full(self, node: BTreeNode, key: Any, value: Any) -> None:
         i = len(node.keys) - 1
@@ -157,14 +160,14 @@ class BTree:
         mid_value = child.values[mid]
 
         # Copy second half of keys/values
-        new_child.keys = child.keys[mid + 1:]
-        new_child.values = child.values[mid + 1:]
+        new_child.keys = child.keys[mid + 1 :]
+        new_child.values = child.values[mid + 1 :]
         child.keys = child.keys[:mid]
         child.values = child.values[:mid]
 
         if not child.is_leaf():
-            new_child.children = child.children[mid + 1:]
-            child.children = child.children[:mid + 1]
+            new_child.children = child.children[mid + 1 :]
+            child.children = child.children[: mid + 1]
 
         # Promote middle key to parent
         parent.keys.insert(index, mid_key)
@@ -184,13 +187,14 @@ class BTree:
         KeyNotFoundError
             If *key* is not present.
         """
-        if not self._find(self._root, key):
-            raise KeyNotFoundError(key)
-        self._delete(self._root, key)
-        self._size -= 1
-        if len(self._root.keys) == 0 and not self._root.is_leaf():
-            self._root = self._root.children[0]
-            self._root.parent = None
+        with self._lock:
+            if not self._find(self._root, key):
+                raise KeyNotFoundError(key)
+            self._delete(self._root, key)
+            self._size -= 1
+            if len(self._root.keys) == 0 and not self._root.is_leaf():
+                self._root = self._root.children[0]
+                self._root.parent = None
 
     def _delete(self, node: BTreeNode, key: Any) -> None:
         if node.is_leaf():
@@ -282,11 +286,12 @@ class BTree:
 
     def search(self, key: Any) -> Any | None:
         """Return the value associated with *key*, or *None* if absent."""
-        try:
-            node, idx = self._search(self._root, key)
-            return node.values[idx]
-        except (KeyNotFoundError, TypeError):
-            return None
+        with self._lock:
+            try:
+                node, idx = self._search(self._root, key)
+                return node.values[idx]
+            except (KeyNotFoundError, TypeError):
+                return None
 
     def _search(self, node: BTreeNode | None, key: Any) -> tuple[BTreeNode, int]:
         if node is None:
@@ -302,11 +307,12 @@ class BTree:
 
     def contains(self, key: Any) -> bool:
         """Return *True* if *key* is present."""
-        try:
-            self._search(self._root, key)
-            return True
-        except KeyNotFoundError:
-            return False
+        with self._lock:
+            try:
+                self._search(self._root, key)
+                return True
+            except KeyNotFoundError:
+                return False
 
     def update(self, key: Any, value: Any) -> None:
         """Update the value of an existing *key*.
@@ -316,8 +322,9 @@ class BTree:
         KeyNotFoundError
             If *key* does not exist.
         """
-        node, idx = self._search(self._root, key)
-        node.values[idx] = value
+        with self._lock:
+            node, idx = self._search(self._root, key)
+            node.values[idx] = value
 
     def _update_value(self, node: BTreeNode, key: Any, value: Any) -> None:
         try:
@@ -335,8 +342,9 @@ class BTree:
 
     def clear(self) -> None:
         """Remove all keys from the tree."""
-        self._root = BTreeNode()
-        self._size = 0
+        with self._lock:
+            self._root = BTreeNode()
+            self._size = 0
 
     # ------------------------------------------------------------------
     # Metrics
@@ -344,11 +352,13 @@ class BTree:
 
     def size(self) -> int:
         """Return the number of keys currently in the tree."""
-        return self._size
+        with self._lock:
+            return self._size
 
     def is_empty(self) -> bool:
         """Return *True* if the tree contains no keys."""
-        return self._size == 0
+        with self._lock:
+            return self._size == 0
 
     def min(self) -> Any:
         """Return the minimum key.
@@ -358,12 +368,13 @@ class BTree:
         EmptyTreeError
             If the tree is empty.
         """
-        if self.is_empty():
-            raise EmptyTreeError("min")
-        node = self._root
-        while not node.is_leaf():
-            node = node.children[0]
-        return node.keys[0]
+        with self._lock:
+            if self.is_empty():
+                raise EmptyTreeError("min")
+            node = self._root
+            while not node.is_leaf():
+                node = node.children[0]
+            return node.keys[0]
 
     def max(self) -> Any:
         """Return the maximum key.
@@ -373,12 +384,13 @@ class BTree:
         EmptyTreeError
             If the tree is empty.
         """
-        if self.is_empty():
-            raise EmptyTreeError("max")
-        node = self._root
-        while not node.is_leaf():
-            node = node.children[-1]
-        return node.keys[-1]
+        with self._lock:
+            if self.is_empty():
+                raise EmptyTreeError("max")
+            node = self._root
+            while not node.is_leaf():
+                node = node.children[-1]
+            return node.keys[-1]
 
     # ------------------------------------------------------------------
     # Validation
@@ -399,13 +411,14 @@ class BTree:
         bool
             *True* if all invariants hold.
         """
-        if self._size == 0:
-            return True
-        try:
-            self._validate(self._root, None, None)
-            return True
-        except (ValueError, AssertionError):
-            return False
+        with self._lock:
+            if self._size == 0:
+                return True
+            try:
+                self._validate(self._root, None, None)
+                return True
+            except (ValueError, AssertionError):
+                return False
 
     def _validate(
         self,
@@ -462,7 +475,7 @@ class BTree:
 
     def __len__(self) -> int:
         """Return the number of keys in the tree."""
-        return self._size
+        return self.size()
 
     def __contains__(self, key: Any) -> bool:
         """Support ``key in tree`` syntax."""
@@ -470,7 +483,9 @@ class BTree:
 
     def __iter__(self) -> Iterator[Any]:
         """Iterate over keys in ascending order."""
-        yield from self._inorder(self._root)
+        with self._lock:
+            keys = list(self._inorder(self._root))
+        return iter(keys)
 
     def _inorder(self, node: BTreeNode | None) -> Iterator[Any]:
         if node is None:
@@ -484,5 +499,6 @@ class BTree:
         yield from self._inorder(node.children[-1])
 
     def __repr__(self) -> str:  # pragma: no cover
-        keys = list(self._inorder(self._root))
-        return f"BTree(size={self._size}, order={self._order}, keys={keys})"
+        with self._lock:
+            keys = list(self._inorder(self._root))
+            return f"BTree(size={self._size}, order={self._order}, keys={keys})"

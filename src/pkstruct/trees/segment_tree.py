@@ -31,6 +31,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from math import gcd
 
+from pkstruct.shared.threading import StructureLock
+
 # ---------------------------------------------------------------------------
 # Supported operations
 # ---------------------------------------------------------------------------
@@ -105,8 +107,7 @@ class SegmentTree:
     ) -> None:
         if operation not in SUPPORTED_OPERATIONS:
             raise ValueError(
-                f"Unsupported operation '{operation}'. "
-                f"Choose from: {sorted(SUPPORTED_OPERATIONS)}"
+                f"Unsupported operation '{operation}'. Choose from: {sorted(SUPPORTED_OPERATIONS)}"
             )
         self._operation_name: str = operation
         self._op: Callable[[int, int], int] = _OPERATION[operation]
@@ -117,6 +118,7 @@ class SegmentTree:
         self._n: int = 0
         self._tree: list[int] = []
         self._lazy: list[int] = []
+        self._lock: StructureLock = StructureLock()
 
         if not data:
             raise ValueError("Cannot build a segment tree from an empty sequence.")
@@ -141,17 +143,18 @@ class SegmentTree:
             ValueError: If data is empty.
             TypeError:  If elements are not integers.
         """
-        if not data:
-            raise ValueError("Cannot build a segment tree from an empty sequence.")
-        data = list(data)
-        for i, v in enumerate(data):
-            if not isinstance(v, int):
-                raise TypeError(f"Expected int at index {i}, got {type(v).__name__}.")
-        self._n = len(data)
-        size = 4 * self._n
-        self._tree = [self._identity] * size
-        self._lazy = [self._identity] * size
-        self._build(data, 1, 0, self._n - 1)
+        with self._lock:
+            if not data:
+                raise ValueError("Cannot build a segment tree from an empty sequence.")
+            data = list(data)
+            for i, v in enumerate(data):
+                if not isinstance(v, int):
+                    raise TypeError(f"Expected int at index {i}, got {type(v).__name__}.")
+            self._n = len(data)
+            size = 4 * self._n
+            self._tree = [self._identity] * size
+            self._lazy = [self._identity] * size
+            self._build(data, 1, 0, self._n - 1)
 
     def _build(self, data: list[int], node: int, start: int, end: int) -> None:
         if start == end:
@@ -175,12 +178,8 @@ class SegmentTree:
         left_len = mid - start + 1
         right_len = end - mid
 
-        self._tree[left] = self._lazy_propagate(
-            self._tree[left], self._lazy[node], left_len
-        )
-        self._tree[right] = self._lazy_propagate(
-            self._tree[right], self._lazy[node], right_len
-        )
+        self._tree[left] = self._lazy_propagate(self._tree[left], self._lazy[node], left_len)
+        self._tree[right] = self._lazy_propagate(self._tree[right], self._lazy[node], right_len)
         self._lazy[left] = self._lazy_combine(self._lazy[left], self._lazy[node])
         self._lazy[right] = self._lazy_combine(self._lazy[right], self._lazy[node])
         self._lazy[node] = self._identity
@@ -206,12 +205,11 @@ class SegmentTree:
             IndexError: If indices are out of bounds.
             ValueError: If left > right.
         """
-        self._check_range(left, right)
-        return self._query(1, 0, self._n - 1, left, right)
+        with self._lock:
+            self._check_range(left, right)
+            return self._query(1, 0, self._n - 1, left, right)
 
-    def _query(
-        self, node: int, start: int, end: int, left: int, right: int
-    ) -> int:
+    def _query(self, node: int, start: int, end: int, left: int, right: int) -> int:
         if right < start or end < left:
             return self._identity
         if left <= start and end <= right:
@@ -240,14 +238,13 @@ class SegmentTree:
             IndexError: If index is out of bounds.
             TypeError:  If value is not an integer.
         """
-        self._check_index(index)
-        if not isinstance(value, int):
-            raise TypeError(f"Expected int, got {type(value).__name__}.")
-        self._update(1, 0, self._n - 1, index, value)
+        with self._lock:
+            self._check_index(index)
+            if not isinstance(value, int):
+                raise TypeError(f"Expected int, got {type(value).__name__}.")
+            self._update(1, 0, self._n - 1, index, value)
 
-    def _update(
-        self, node: int, start: int, end: int, index: int, value: int
-    ) -> None:
+    def _update(self, node: int, start: int, end: int, index: int, value: int) -> None:
         if start == end:
             self._tree[node] = value
             self._lazy[node] = self._identity
@@ -283,10 +280,11 @@ class SegmentTree:
             IndexError: If indices are out of bounds.
             ValueError: If left > right.
         """
-        self._check_range(left, right)
-        if not isinstance(value, int):
-            raise TypeError(f"Expected int, got {type(value).__name__}.")
-        self._range_update(1, 0, self._n - 1, left, right, value)
+        with self._lock:
+            self._check_range(left, right)
+            if not isinstance(value, int):
+                raise TypeError(f"Expected int, got {type(value).__name__}.")
+            self._range_update(1, 0, self._n - 1, left, right, value)
 
     def _range_update(
         self,
@@ -323,7 +321,8 @@ class SegmentTree:
         Args:
             data: New sequence of integers.
         """
-        self.build(data)
+        with self._lock:
+            self.build(data)
 
     def clear(self) -> None:
         """
@@ -331,9 +330,10 @@ class SegmentTree:
 
         Complexity: O(n)
         """
-        self._n = 0
-        self._tree = []
-        self._lazy = []
+        with self._lock:
+            self._n = 0
+            self._tree = []
+            self._lazy = []
 
     # ------------------------------------------------------------------
     # Validation
@@ -351,10 +351,11 @@ class SegmentTree:
         Raises:
             RuntimeError: If an inconsistency is detected.
         """
-        if self._n == 0:
+        with self._lock:
+            if self._n == 0:
+                return True
+            self._validate(1, 0, self._n - 1)
             return True
-        self._validate(1, 0, self._n - 1)
-        return True
 
     def _validate(self, node: int, start: int, end: int) -> int:
         if start == end:
@@ -379,9 +380,8 @@ class SegmentTree:
         return self._n
 
     def __repr__(self) -> str:
-        return (
-            f"SegmentTree(size={self._n}, operation='{self._operation_name}')"
-        )
+        with self._lock:
+            return f"SegmentTree(size={self._n}, operation='{self._operation_name}')"
 
     # ------------------------------------------------------------------
     # Internal validation helpers
@@ -389,9 +389,7 @@ class SegmentTree:
 
     def _check_index(self, index: int) -> None:
         if not (0 <= index < self._n):
-            raise IndexError(
-                f"Index {index} out of range for tree of size {self._n}."
-            )
+            raise IndexError(f"Index {index} out of range for tree of size {self._n}.")
 
     def _check_range(self, left: int, right: int) -> None:
         if left > right:

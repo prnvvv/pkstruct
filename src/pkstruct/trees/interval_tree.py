@@ -36,12 +36,15 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
+from pkstruct.shared.threading import StructureLock
+
 Interval = tuple[int, int]
 
 
 # ---------------------------------------------------------------------------
 # Internal node
 # ---------------------------------------------------------------------------
+
 
 class _INode:
     """Internal node for the augmented AVL interval tree."""
@@ -51,7 +54,7 @@ class _INode:
     def __init__(self, start: int, end: int) -> None:
         self.start: int = start
         self.end: int = end
-        self.max_end: int = end          # max endpoint in subtree
+        self.max_end: int = end  # max endpoint in subtree
         self.height: int = 1
         self.left: _INode | None = None
         self.right: _INode | None = None
@@ -60,6 +63,7 @@ class _INode:
 # ---------------------------------------------------------------------------
 # AVL helpers (interval-specific)
 # ---------------------------------------------------------------------------
+
 
 def _height(node: _INode | None) -> int:
     return node.height if node is not None else 0
@@ -126,6 +130,7 @@ def _rebalance(node: _INode) -> _INode:
 # BST operations
 # ---------------------------------------------------------------------------
 
+
 def _insert(node: _INode | None, start: int, end: int) -> _INode:
     """Insert (start, end) into subtree rooted at node; return new root."""
     if node is None:
@@ -143,9 +148,7 @@ def _min_node(node: _INode) -> _INode:
     return node
 
 
-def _delete(
-    node: _INode | None, start: int, end: int
-) -> _INode | None:
+def _delete(node: _INode | None, start: int, end: int) -> _INode | None:
     """Delete first occurrence of (start, end); return new root."""
     if node is None:
         return None
@@ -169,6 +172,7 @@ def _delete(
 # ---------------------------------------------------------------------------
 # Overlap search helpers
 # ---------------------------------------------------------------------------
+
 
 def _overlaps(a_start: int, a_end: int, b_start: int, b_end: int) -> bool:
     """True if intervals [a_start, a_end] and [b_start, b_end] overlap."""
@@ -220,6 +224,7 @@ def _inorder(node: _INode | None, out: list[Interval]) -> None:
 # IntervalTree
 # ---------------------------------------------------------------------------
 
+
 class IntervalTree:
     """
     An augmented AVL interval tree supporting efficient overlap queries.
@@ -248,6 +253,7 @@ class IntervalTree:
     def __init__(self) -> None:
         self._root: _INode | None = None
         self._size: int = 0
+        self._lock: StructureLock = StructureLock()
 
     # ------------------------------------------------------------------
     # Insert / delete
@@ -266,12 +272,11 @@ class IntervalTree:
         Raises:
             ValueError: If start > end.
         """
-        if start > end:
-            raise ValueError(
-                f"Invalid interval: start ({start}) must be <= end ({end})."
-            )
-        self._root = _insert(self._root, start, end)
-        self._size += 1
+        with self._lock:
+            if start > end:
+                raise ValueError(f"Invalid interval: start ({start}) must be <= end ({end}).")
+            self._root = _insert(self._root, start, end)
+            self._size += 1
 
     def delete(self, start: int, end: int) -> None:
         """
@@ -286,10 +291,11 @@ class IntervalTree:
         Raises:
             KeyError: If the interval is not present.
         """
-        if not self.__contains__((start, end)):
-            raise KeyError(f"Interval ({start}, {end}) not found in tree.")
-        self._root = _delete(self._root, start, end)
-        self._size -= 1
+        with self._lock:
+            if not self.__contains__((start, end)):
+                raise KeyError(f"Interval ({start}, {end}) not found in tree.")
+            self._root = _delete(self._root, start, end)
+            self._size -= 1
 
     # ------------------------------------------------------------------
     # Search / overlap
@@ -310,9 +316,10 @@ class IntervalTree:
         Returns:
             List of overlapping (start, end) tuples.
         """
-        results: list[Interval] = []
-        _search_overlaps(self._root, start, end, results)
-        return results
+        with self._lock:
+            results: list[Interval] = []
+            _search_overlaps(self._root, start, end, results)
+            return results
 
     def overlap(self, start: int, end: int) -> bool:
         """
@@ -327,16 +334,19 @@ class IntervalTree:
         Returns:
             True if at least one overlap exists.
         """
-        return self._overlap_exists(self._root, start, end)
+        with self._lock:
+            return self._overlap_exists(self._root, start, end)
 
-    def _overlap_exists(
-        self, node: _INode | None, start: int, end: int
-    ) -> bool:
+    def _overlap_exists(self, node: _INode | None, start: int, end: int) -> bool:
         if node is None:
             return False
         if _overlaps(node.start, node.end, start, end):
             return True
-        if node.left is not None and node.left.max_end >= start and self._overlap_exists(node.left, start, end):
+        if (
+            node.left is not None
+            and node.left.max_end >= start
+            and self._overlap_exists(node.left, start, end)
+        ):
             return True
         return self._overlap_exists(node.right, start, end)
 
@@ -350,6 +360,8 @@ class IntervalTree:
         """
         return self.search(start, end)
 
+    # all_overlaps delegates to search which wraps with lock
+
     def contains_point(self, point: int) -> list[Interval]:
         """
         Return all intervals that contain the given point.
@@ -362,9 +374,10 @@ class IntervalTree:
         Returns:
             List of intervals [start, end] where start <= point <= end.
         """
-        results: list[Interval] = []
-        _contains_point(self._root, point, results)
-        return results
+        with self._lock:
+            results: list[Interval] = []
+            _contains_point(self._root, point, results)
+            return results
 
     # ------------------------------------------------------------------
     # Merge overlaps
@@ -378,22 +391,25 @@ class IntervalTree:
 
         Complexity: O(n log n)  [sort + linear merge + rebuild]
         """
-        intervals: list[Interval] = []
-        _inorder(self._root, intervals)
-        if not intervals:
-            return
-        intervals.sort()
-        merged: list[Interval] = [intervals[0]]
-        for start, end in intervals[1:]:
-            prev_start, prev_end = merged[-1]
-            if start <= prev_end + 1:            # overlapping or touching
-                merged[-1] = (prev_start, max(prev_end, end))
-            else:
-                merged.append((start, end))
-        self.clear()
-        for s, e in merged:
-            self.insert(s, e)
+        with self._lock:
+            intervals: list[Interval] = []
+            _inorder(self._root, intervals)
+            if not intervals:
+                return
+            intervals.sort()
+            merged: list[Interval] = [intervals[0]]
+            for start, end in intervals[1:]:
+                prev_start, prev_end = merged[-1]
+                if start <= prev_end + 1:  # overlapping or touching
+                    merged[-1] = (prev_start, max(prev_end, end))
+                else:
+                    merged.append((start, end))
+            self.clear()
+            for s, e in merged:
+                self.insert(s, e)
 
+    # ------------------------------------------------------------------
+    # Validate
     # ------------------------------------------------------------------
     # Validate
     # ------------------------------------------------------------------
@@ -410,8 +426,9 @@ class IntervalTree:
         Raises:
             RuntimeError: If any invariant is violated.
         """
-        self._validate_node(self._root)
-        return True
+        with self._lock:
+            self._validate_node(self._root)
+            return True
 
     def _validate_node(self, node: _INode | None) -> tuple[int, int]:
         """Returns (height, max_end) of subtree; raises on violation."""
@@ -434,8 +451,7 @@ class IntervalTree:
         bf = lh - rh
         if abs(bf) > 1:
             raise RuntimeError(
-                f"AVL balance violation at ({node.start},{node.end}): "
-                f"balance factor {bf}."
+                f"AVL balance violation at ({node.start},{node.end}): balance factor {bf}."
             )
         return expected_height, expected_max
 
@@ -445,8 +461,9 @@ class IntervalTree:
 
     def clear(self) -> None:
         """Remove all intervals from the tree. Complexity: O(1)."""
-        self._root = None
-        self._size = 0
+        with self._lock:
+            self._root = None
+            self._size = 0
 
     @property
     def size(self) -> int:
@@ -459,7 +476,8 @@ class IntervalTree:
 
         Complexity: O(1)  [stored in root node]
         """
-        return _height(self._root)
+        with self._lock:
+            return _height(self._root)
 
     @property
     def max_endpoint(self) -> int | None:
@@ -470,7 +488,8 @@ class IntervalTree:
 
         Complexity: O(1)
         """
-        return self._root.max_end if self._root is not None else None
+        with self._lock:
+            return self._root.max_end if self._root is not None else None
 
     # ------------------------------------------------------------------
     # Dunder
@@ -478,7 +497,7 @@ class IntervalTree:
 
     def __len__(self) -> int:
         """Return number of intervals. Complexity: O(1)."""
-        return self._size
+        return self.size
 
     def __contains__(self, interval: object) -> bool:
         """
@@ -486,10 +505,11 @@ class IntervalTree:
 
         Complexity: O(log n)
         """
-        if not (isinstance(interval, tuple) and len(interval) == 2):
-            return False
-        start, end = interval  # type: ignore[misc]
-        return self._find(self._root, start, end)
+        with self._lock:
+            if not (isinstance(interval, tuple) and len(interval) == 2):
+                return False
+            start, end = interval  # type: ignore[misc]
+            return self._find(self._root, start, end)
 
     def _find(self, node: _INode | None, start: int, end: int) -> bool:
         if node is None:
@@ -506,13 +526,16 @@ class IntervalTree:
 
         Complexity: O(n)
         """
-        intervals: list[Interval] = []
-        _inorder(self._root, intervals)
-        return iter(intervals)
+        with self._lock:
+            intervals: list[Interval] = []
+            _inorder(self._root, intervals)
+            result = list(intervals)
+        return iter(result)
 
     def __repr__(self) -> str:
-        return (
-            f"IntervalTree(size={self._size}, "
-            f"height={self.height()}, "
-            f"max_endpoint={self.max_endpoint})"
-        )
+        with self._lock:
+            return (
+                f"IntervalTree(size={self._size}, "
+                f"height={self.height()}, "
+                f"max_endpoint={self.max_endpoint})"
+            )

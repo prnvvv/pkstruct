@@ -31,6 +31,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from pkstruct.shared.threading import StructureLock
+
 
 class FenwickTree:
     """
@@ -71,6 +73,7 @@ class FenwickTree:
     ) -> None:
         if data is None and n is None:
             raise ValueError("Provide either 'data' or 'n'.")
+        self._lock: StructureLock = StructureLock()
         if data is not None:
             self._n: int = len(data)
             self._tree: list[int] = [0] * (self._n + 1)
@@ -98,20 +101,21 @@ class FenwickTree:
         Raises:
             TypeError: If elements are not int or float, or data is empty.
         """
-        if not data:
-            raise TypeError("Cannot build a Fenwick tree from an empty sequence.")
-        n = len(data)
-        self._n = n
-        self._tree = [0] * (n + 1)
-        for i, v in enumerate(data, start=1):
-            if not isinstance(v, (int, float)):
-                raise TypeError(
-                    f"Expected int or float at position {i}, got {type(v).__name__}."
-                )
-            self._tree[i] += v
-            parent = i + (i & -i)
-            if parent <= n:
-                self._tree[parent] += self._tree[i]
+        with self._lock:
+            if not data:
+                raise TypeError("Cannot build a Fenwick tree from an empty sequence.")
+            n = len(data)
+            self._n = n
+            self._tree = [0] * (n + 1)
+            for i, v in enumerate(data, start=1):
+                if not isinstance(v, (int, float)):
+                    raise TypeError(
+                        f"Expected int or float at position {i}, got {type(v).__name__}."
+                    )
+                self._tree[i] += v
+                parent = i + (i & -i)
+                if parent <= n:
+                    self._tree[parent] += self._tree[i]
 
     # ------------------------------------------------------------------
     # Update
@@ -130,10 +134,11 @@ class FenwickTree:
         Raises:
             IndexError: If index is out of bounds.
         """
-        self._check_index(index)
-        while index <= self._n:
-            self._tree[index] += delta
-            index += index & -index
+        with self._lock:
+            self._check_index(index)
+            while index <= self._n:
+                self._tree[index] += delta
+                index += index & -index
 
     # ------------------------------------------------------------------
     # Prefix sum / query
@@ -154,12 +159,13 @@ class FenwickTree:
         Raises:
             IndexError: If index is out of bounds.
         """
-        self._check_index(index)
-        total: int = 0
-        while index > 0:
-            total += self._tree[index]
-            index -= index & -index
-        return total
+        with self._lock:
+            self._check_index(index)
+            total: int = 0
+            while index > 0:
+                total += self._tree[index]
+                index -= index & -index
+            return total
 
     def prefix_sum(self, index: int) -> int:
         """
@@ -190,13 +196,14 @@ class FenwickTree:
             IndexError: If indices are out of bounds.
             ValueError: If left > right.
         """
-        if left > right:
-            raise ValueError(f"left ({left}) must be <= right ({right}).")
-        self._check_index(left)
-        self._check_index(right)
-        if left == 1:
-            return self.query(right)
-        return self.query(right) - self.query(left - 1)
+        with self._lock:
+            if left > right:
+                raise ValueError(f"left ({left}) must be <= right ({right}).")
+            self._check_index(left)
+            self._check_index(right)
+            if left == 1:
+                return self.query(right)
+            return self.query(right) - self.query(left - 1)
 
     # ------------------------------------------------------------------
     # Lower bound
@@ -217,17 +224,18 @@ class FenwickTree:
         Returns:
             1-based index p, or n+1 if value exceeds total sum.
         """
-        pos = 0
-        log = self._n.bit_length()
-        cumulative = 0
-        step = 1 << log
-        while step > 0:
-            next_pos = pos + step
-            if next_pos <= self._n and cumulative + self._tree[next_pos] < value:
-                cumulative += self._tree[next_pos]
-                pos = next_pos
-            step >>= 1
-        return pos + 1
+        with self._lock:
+            pos = 0
+            log = self._n.bit_length()
+            cumulative = 0
+            step = 1 << log
+            while step > 0:
+                next_pos = pos + step
+                if next_pos <= self._n and cumulative + self._tree[next_pos] < value:
+                    cumulative += self._tree[next_pos]
+                    pos = next_pos
+                step >>= 1
+            return pos + 1
 
     # ------------------------------------------------------------------
     # Clear / size
@@ -239,7 +247,8 @@ class FenwickTree:
 
         Complexity: O(n)
         """
-        self._tree = [0] * (self._n + 1)
+        with self._lock:
+            self._tree = [0] * (self._n + 1)
 
     @property
     def size(self) -> int:
@@ -262,22 +271,23 @@ class FenwickTree:
         Raises:
             RuntimeError: If an inconsistency is found.
         """
-        # Reconstruct original array from BIT
-        values = [0] * (self._n + 1)
-        for i in range(1, self._n + 1):
-            values[i] = self.range_query(i, i)
+        with self._lock:
+            # Reconstruct original array from BIT
+            values = [0] * (self._n + 1)
+            for i in range(1, self._n + 1):
+                values[i] = self.range_query(i, i)
 
-        # Recompute expected prefix sums and compare
-        expected_prefix = 0
-        for i in range(1, self._n + 1):
-            expected_prefix += values[i]
-            actual = self.query(i)
-            if actual != expected_prefix:
-                raise RuntimeError(
-                    f"Validation failed at index {i}: "
-                    f"expected prefix sum {expected_prefix}, got {actual}."
-                )
-        return True
+            # Recompute expected prefix sums and compare
+            expected_prefix = 0
+            for i in range(1, self._n + 1):
+                expected_prefix += values[i]
+                actual = self.query(i)
+                if actual != expected_prefix:
+                    raise RuntimeError(
+                        f"Validation failed at index {i}: "
+                        f"expected prefix sum {expected_prefix}, got {actual}."
+                    )
+            return True
 
     # ------------------------------------------------------------------
     # Dunder
@@ -288,7 +298,8 @@ class FenwickTree:
         return self._n
 
     def __repr__(self) -> str:
-        return f"FenwickTree(size={self._n})"
+        with self._lock:
+            return f"FenwickTree(size={self._n})"
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -297,6 +308,5 @@ class FenwickTree:
     def _check_index(self, index: int) -> None:
         if not (1 <= index <= self._n):
             raise IndexError(
-                f"Index {index} out of range for tree of size {self._n} "
-                f"(1-based: 1..{self._n})."
+                f"Index {index} out of range for tree of size {self._n} (1-based: 1..{self._n})."
             )

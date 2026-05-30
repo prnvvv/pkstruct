@@ -49,6 +49,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+from pkstruct.shared.threading import StructureLock
 from pkstruct.trees.exceptions import (
     DuplicateKeyError,
     EmptyTreeError,
@@ -79,6 +80,7 @@ class BPlusTree:
         self._root: BPlusNode = BPlusNode(is_leaf=True)
         self._first_leaf: BPlusNode = self._root
         self._size: int = 0
+        self._lock: StructureLock = StructureLock()
 
     # ------------------------------------------------------------------
     # Properties
@@ -108,23 +110,24 @@ class BPlusTree:
         DuplicateKeyError
             If ``allow_duplicates=True`` and *key* already exists.
         """
-        # Check for duplicate
-        try:
-            existing = self._find_leaf(self._root, key)
-            if existing is not None and key in existing.keys:
-                if self._allow_duplicates:
-                    raise DuplicateKeyError(key)
-                idx = existing.keys.index(key)
-                existing.values[idx] = value
-                return
-        except (KeyNotFoundError, AttributeError):
-            pass
+        with self._lock:
+            # Check for duplicate
+            try:
+                existing = self._find_leaf(self._root, key)
+                if existing is not None and key in existing.keys:
+                    if self._allow_duplicates:
+                        raise DuplicateKeyError(key)
+                    idx = existing.keys.index(key)
+                    existing.values[idx] = value
+                    return
+            except (KeyNotFoundError, AttributeError):
+                pass
 
-        leaf = self._find_leaf(self._root, key)
-        self._insert_into_leaf(leaf, key, value)
+            leaf = self._find_leaf(self._root, key)
+            self._insert_into_leaf(leaf, key, value)
 
-        if len(leaf.keys) > 2 * self._order - 1:
-            self._split_leaf(leaf)
+            if len(leaf.keys) > 2 * self._order - 1:
+                self._split_leaf(leaf)
 
     def _find_leaf(self, node: BPlusNode, key: Any) -> BPlusNode:
         if node.is_leaf:
@@ -185,10 +188,10 @@ class BPlusTree:
         mid = len(node.keys) // 2
         up_key = node.keys[mid]
 
-        new_node.keys = node.keys[mid + 1:]
-        new_node.children = node.children[mid + 1:]
+        new_node.keys = node.keys[mid + 1 :]
+        new_node.children = node.children[mid + 1 :]
         node.keys = node.keys[:mid]
-        node.children = node.children[:mid + 1]
+        node.children = node.children[: mid + 1]
 
         for child in new_node.children:
             child.parent = new_node
@@ -208,26 +211,29 @@ class BPlusTree:
         KeyNotFoundError
             If *key* is not present.
         """
-        leaf = self._find_leaf(self._root, key)
-        if key not in leaf.keys:
-            raise KeyNotFoundError(key)
-        idx = leaf.keys.index(key)
-        leaf.keys.pop(idx)
-        leaf.values.pop(idx)
-        self._size -= 1
+        with self._lock:
+            leaf = self._find_leaf(self._root, key)
+            if key not in leaf.keys:
+                raise KeyNotFoundError(key)
+            idx = leaf.keys.index(key)
+            leaf.keys.pop(idx)
+            leaf.values.pop(idx)
+            self._size -= 1
 
     def search(self, key: Any) -> Any | None:
         """Return the value associated with *key*, or *None* if absent."""
-        leaf = self._find_leaf(self._root, key)
-        if key in leaf.keys:
-            idx = leaf.keys.index(key)
-            return leaf.values[idx]
-        return None
+        with self._lock:
+            leaf = self._find_leaf(self._root, key)
+            if key in leaf.keys:
+                idx = leaf.keys.index(key)
+                return leaf.values[idx]
+            return None
 
     def contains(self, key: Any) -> bool:
         """Return *True* if *key* is present."""
-        leaf = self._find_leaf(self._root, key)
-        return key in leaf.keys
+        with self._lock:
+            leaf = self._find_leaf(self._root, key)
+            return key in leaf.keys
 
     def update(self, key: Any, value: Any) -> None:
         """Update the value of an existing *key*.
@@ -237,17 +243,19 @@ class BPlusTree:
         KeyNotFoundError
             If *key* does not exist.
         """
-        leaf = self._find_leaf(self._root, key)
-        if key not in leaf.keys:
-            raise KeyNotFoundError(key)
-        idx = leaf.keys.index(key)
-        leaf.values[idx] = value
+        with self._lock:
+            leaf = self._find_leaf(self._root, key)
+            if key not in leaf.keys:
+                raise KeyNotFoundError(key)
+            idx = leaf.keys.index(key)
+            leaf.values[idx] = value
 
     def clear(self) -> None:
         """Remove all keys from the tree."""
-        self._root = BPlusNode(is_leaf=True)
-        self._first_leaf = self._root
-        self._size = 0
+        with self._lock:
+            self._root = BPlusNode(is_leaf=True)
+            self._first_leaf = self._root
+            self._size = 0
 
     # ------------------------------------------------------------------
     # Metrics
@@ -255,11 +263,13 @@ class BPlusTree:
 
     def size(self) -> int:
         """Return the number of keys currently in the tree."""
-        return self._size
+        with self._lock:
+            return self._size
 
     def is_empty(self) -> bool:
         """Return *True* if the tree contains no keys."""
-        return self._size == 0
+        with self._lock:
+            return self._size == 0
 
     def min(self) -> Any:
         """Return the minimum key.
@@ -269,9 +279,10 @@ class BPlusTree:
         EmptyTreeError
             If the tree is empty.
         """
-        if self.is_empty():
-            raise EmptyTreeError("min")
-        return self._first_leaf.keys[0]
+        with self._lock:
+            if self.is_empty():
+                raise EmptyTreeError("min")
+            return self._first_leaf.keys[0]
 
     def max(self) -> Any:
         """Return the maximum key.
@@ -281,12 +292,13 @@ class BPlusTree:
         EmptyTreeError
             If the tree is empty.
         """
-        if self.is_empty():
-            raise EmptyTreeError("max")
-        leaf = self._first_leaf
-        while leaf.next_leaf is not None:
-            leaf = leaf.next_leaf
-        return leaf.keys[-1]
+        with self._lock:
+            if self.is_empty():
+                raise EmptyTreeError("max")
+            leaf = self._first_leaf
+            while leaf.next_leaf is not None:
+                leaf = leaf.next_leaf
+            return leaf.keys[-1]
 
     # ------------------------------------------------------------------
     # Leaf traversal
@@ -300,12 +312,13 @@ class BPlusTree:
         list
             All keys in sorted order by walking the leaf chain.
         """
-        result: list[Any] = []
-        leaf = self._first_leaf
-        while leaf is not None:
-            result.extend(leaf.keys)
-            leaf = leaf.next_leaf
-        return result
+        with self._lock:
+            result: list[Any] = []
+            leaf = self._first_leaf
+            while leaf is not None:
+                result.extend(leaf.keys)
+                leaf = leaf.next_leaf
+            return result
 
     # ------------------------------------------------------------------
     # Range query
@@ -326,16 +339,17 @@ class BPlusTree:
         list
             Sorted keys within the range.
         """
-        result: list[Any] = []
-        leaf = self._find_leaf(self._root, lo)
-        while leaf is not None:
-            for k in leaf.keys:
-                if lo <= k <= hi:
-                    result.append(k)
-                elif k > hi:
-                    return result
-            leaf = leaf.next_leaf
-        return result
+        with self._lock:
+            result: list[Any] = []
+            leaf = self._find_leaf(self._root, lo)
+            while leaf is not None:
+                for k in leaf.keys:
+                    if lo <= k <= hi:
+                        result.append(k)
+                    elif k > hi:
+                        return result
+                leaf = leaf.next_leaf
+            return result
 
     # ------------------------------------------------------------------
     # Validation
@@ -355,13 +369,14 @@ class BPlusTree:
         bool
             *True* if all invariants hold.
         """
-        if self._size == 0:
-            return True
-        try:
-            self._validate(self._root, None, None, 0, [])
-            return True
-        except (ValueError, AssertionError, AttributeError):
-            return False
+        with self._lock:
+            if self._size == 0:
+                return True
+            try:
+                self._validate(self._root, None, None, 0, [])
+                return True
+            except (ValueError, AssertionError, AttributeError):
+                return False
 
     def _validate(
         self,
@@ -394,17 +409,17 @@ class BPlusTree:
     # ------------------------------------------------------------------
 
     def __len__(self) -> int:
-        return self._size
+        return self.size()
 
     def __contains__(self, key: Any) -> bool:
         return self.contains(key)
 
     def __iter__(self) -> Iterator[Any]:
-        leaf = self._first_leaf
-        while leaf is not None:
-            yield from leaf.keys
-            leaf = leaf.next_leaf
+        with self._lock:
+            keys = list(self.leaf_traversal())
+        return iter(keys)
 
     def __repr__(self) -> str:  # pragma: no cover
-        keys = list(self.__iter__())
-        return f"BPlusTree(size={self._size}, order={self._order}, keys={keys})"
+        with self._lock:
+            keys = list(self.leaf_traversal())
+            return f"BPlusTree(size={self._size}, order={self._order}, keys={keys})"
