@@ -62,6 +62,26 @@ st.range_update(1, 3, 5)  # range add
 st.query(1, 3)     # 24
 ```
 
+```python
+from pkstruct.graphs import Graph, DirectedGraph, bfs, dfs, dijkstra, kruskal
+
+# Create a weighted graph
+g = Graph()
+g.add_edge("A", "B", weight=4.0)
+g.add_edge("B", "C", weight=2.0)
+g.add_edge("A", "C", weight=1.0)
+
+# Traversal
+bfs(g, "A")              # ['A', 'B', 'C']
+
+# Shortest paths
+dist, _ = dijkstra(g, "A")
+dist["C"]                # 1.0
+
+# Minimum spanning tree
+kruskal(g)               # [('A', 'C', 1.0), ('B', 'C', 2.0)]
+```
+
 ## Modules
 
 ### `pkstruct.linear`
@@ -90,6 +110,31 @@ st.query(1, 3)     # 24
 | `SegmentTree` | Segment tree with lazy propagation (sum/min/max/gcd/xor) |
 | `FenwickTree` | Binary indexed tree for prefix-sum operations |
 | `IntervalTree` | Augmented interval tree for overlap queries |
+
+### `pkstruct.graphs`
+
+| Class / Function | Description |
+|---|---|
+| `Graph` | Adjacency-list graph (directed/undirected, weighted) |
+| `DirectedGraph` | Directed graph with in-degree, out-degree, reverse |
+| `WeightedGraph` | Convenience class for weighted undirected graphs |
+| `bfs` / `dfs` | Breadth-first and depth-first search |
+| `bfs_paths` / `dfs_paths` | Find all paths between two vertices |
+| `dijkstra` | Shortest paths (non-negative weights) |
+| `bellman_ford` | Shortest paths (negative weights allowed) |
+| `floyd_warshall` | All-pairs shortest paths |
+| `reconstruct_path` | Path reconstruction from Dijkstra / Bellman-Ford |
+| `reconstruct_path_fw` | Path reconstruction from Floyd-Warshall |
+| `kruskal` / `prim` | Minimum spanning tree |
+| `connected_components` | Find all connected components |
+| `is_connected` / `is_bipartite` | Connectivity checks |
+| `has_cycle` / `has_cycle_directed` | Cycle detection |
+| `topological_sort_kahn` / `topological_sort_dfs` | Topological sort |
+| `kosaraju` / `tarjan` | Strongly connected components |
+| `visualize` / `adjacency_matrix` | ASCII visualization |
+
+**Exceptions:** `GraphError`, `VertexNotFoundError`, `EdgeNotFoundError`,
+`InvalidGraphOperationError`, `NegativeCycleError`, `NoPathError`
 
 ## Features
 
@@ -283,6 +328,73 @@ it.overlap(8, 12)        # [(5, 10, "A")]
 it.overlap_all(8, 12)    # all overlapping intervals
 ```
 
+### Graphs
+
+```python
+from pkstruct.graphs import Graph, DirectedGraph, WeightedGraph
+from pkstruct.graphs import bfs, dfs, dijkstra, bellman_ford, floyd_warshall
+from pkstruct.graphs import reconstruct_path, kruskal, kosaraju
+
+# Create a graph
+g = Graph()
+g.add_edge("A", "B", weight=4.0)
+g.add_edge("B", "C", weight=2.0)
+g.add_edge("A", "C", weight=1.0)
+
+# Traversal
+bfs(g, "A")              # ['A', 'B', 'C']
+dfs(g, "A")              # ['A', 'B', 'C']
+
+# Shortest path (Dijkstra)
+dist, pred = dijkstra(g, "A")
+dist["C"]                # 1.0
+reconstruct_path(pred, "A", "C")  # ['A', 'C']
+
+# Minimum spanning tree
+mst = kruskal(g)         # [('A', 'C', 1.0), ('B', 'C', 2.0)]
+
+# Bellman-Ford (supports negative weights)
+dist, pred = bellman_ford(g, "A")
+dist["C"]                # 1.0
+
+# All-pairs shortest paths
+dist_all, _ = floyd_warshall(g)
+dist_all["A"]["C"]       # 1.0
+
+# Directed graph
+dg = DirectedGraph()
+dg.add_edge("A", "B")
+dg.add_edge("B", "C")
+dg.add_edge("A", "C")
+topological_sort_kahn(dg)  # ['A', 'B', 'C']
+
+# Strongly connected components
+dg.add_edge("C", "A")
+kosaraju(dg)             # [['A', 'B', 'C']] (one SCC)
+
+# Weighted graph
+wg = WeightedGraph()
+wg.add_edge("X", "Y", 3.5)
+wg.add_edge("Y", "Z", 1.5)
+wg.get_weight("X", "Y")  # 3.5
+
+# Visualization
+from pkstruct.graphs import visualize
+print(visualize(g))
+# Graph (directed=False, vertices=3, edges=3)
+#   'A' -> 'B' [4.0] <-> 'C' [1.0]
+#   'B' -> 'A' [4.0] <-> 'C' [2.0]
+#   'C' -> 'A' [1.0] <-> 'B' [2.0]
+
+# Exception handling
+from pkstruct.graphs.exceptions import VertexNotFoundError, NegativeCycleError
+
+try:
+    g.get_weight("X", "Y")
+except VertexNotFoundError:
+    print("Vertex does not exist")
+```
+
 ## String Protocol
 
 ```python
@@ -300,7 +412,7 @@ sll == other       # value equality
 
 ```bash
 pip install -e ".[dev]"
-pytest src/pkstruct/linear/tests src/pkstruct/trees/tests -v
+pytest src/pkstruct/linear/tests src/pkstruct/trees/tests src/pkstruct/graphs/tests -v
 python run_all_tests.py
 ```
 
