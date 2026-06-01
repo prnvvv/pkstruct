@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar, cast
 
+from pkstruct._help import HelpMixin
 from pkstruct._linear_shortcuts import LinearShortcutsMixin
 from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
@@ -22,7 +23,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin):
+class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     """
     A thread-safe FIFO queue implemented on top of ``SinglyLinkedList``.
 
@@ -54,6 +55,18 @@ class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin):
         if items is not None:
             for item in items:
                 self._list.insert(item)
+
+    @classmethod
+    def from_list(cls, items: list[T]) -> LinkedQueue[T]:
+        """Create a LinkedQueue from a list.
+
+        Args:
+            items: Initial elements (front-to-rear order).
+
+        Returns:
+            A new LinkedQueue populated with *items*.
+        """
+        return cls(items)
 
     # ------------------------------------------------------------------ #
     #  Required operations                                                 #
@@ -154,6 +167,23 @@ class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin):
             new._list = cast(SinglyLinkedList[T], self._list.copy())
             return new
 
+    def validate(self) -> bool:
+        """Verify internal consistency. Delegates to the underlying linked list.
+
+        Returns:
+            True if the queue is in a valid state.
+        """
+        return self._list.validate()
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "LinkedQueue",
+                "size": self._list.size(),
+                "values": self.to_list(),
+            }
+
     def to_list(self) -> list[T]:
         """
         Return a list of all elements, from front to rear.
@@ -167,6 +197,11 @@ class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin):
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the queue."""
+        with self._lock:
+            return item in self._list
 
     def __iter__(self) -> Iterator[T]:
         with self._lock:

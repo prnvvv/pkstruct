@@ -77,6 +77,26 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         self._allow_duplicates = allow_duplicates
         self._lock: StructureLock = StructureLock()
 
+    @classmethod
+    def from_list(cls, items: list[Any], allow_duplicates: bool = False) -> BinarySearchTree:
+        """Create a BST from a list of keys.
+
+        Args:
+            items: List of keys to insert.
+            allow_duplicates: Whether to allow duplicate keys (default: False).
+
+        Returns:
+            A new BinarySearchTree populated with *items*.
+        """
+        tree = cls(allow_duplicates=allow_duplicates)
+        for key in items:
+            tree.insert(key)
+        return tree
+
+    def to_list(self) -> list[Any]:
+        """Return all keys in ascending (in-order) order."""
+        return list(self)
+
     # ------------------------------------------------------------------
     # Core CRUD
     # ------------------------------------------------------------------
@@ -125,10 +145,12 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
                     raise ValueError(f"Duplicate key: {key!r}")
                 current.value = value
                 return node, False
+        new_node = TreeNode(key, value)
+        new_node.parent = parent
         if key < parent.key:  # type: ignore[union-attr]
-            parent.left = TreeNode(key, value)  # type: ignore[union-attr]
+            parent.left = new_node  # type: ignore[union-attr]
         else:
-            parent.right = TreeNode(key, value)  # type: ignore[union-attr]
+            parent.right = new_node  # type: ignore[union-attr]
         return node, True
 
     def delete(self, key: Any) -> None:
@@ -147,7 +169,7 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             self._root, deleted = self._delete(self._root, key)
             if not deleted:
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             self._size -= 1
 
     def _delete(
@@ -213,7 +235,7 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             node = self._find(self._root, key)
             if node is None:
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             node.value = value
 
     def clear(self) -> None:
@@ -313,7 +335,7 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             if not self.contains(key):
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             pred: TreeNode | None = None
             node = self._root
             while node is not None:
@@ -338,7 +360,7 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             if not self.contains(key):
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             succ: TreeNode | None = None
             node = self._root
             while node is not None:
@@ -482,7 +504,7 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             for k in (key1, key2):
                 if not self.contains(k):
-                    raise KeyError(k)
+                    raise KeyError(f"Key not found: {k!r}")
             node = self._lca(self._root, key1, key2)
             return node.key if node is not None else None
 
@@ -622,6 +644,9 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     def serialize(self) -> str:
         """Serialize the tree to a JSON string (level-order with null sentinels).
 
+        Each node is encoded as a ``[key, value]`` pair so values are
+        preserved across round-trips.
+
         Returns
         -------
         str
@@ -637,7 +662,7 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
                 if node is None:
                     result.append(None)
                 else:
-                    result.append(node.key)
+                    result.append([node.key, node.value])
                     queue.append(node.left)
                     queue.append(node.right)
             # Trim trailing nulls
@@ -657,22 +682,34 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             self.clear()
-            keys: list[Any | None] = json.loads(data)
-            if not keys:
+            raw: list[Any | None] = json.loads(data)
+            if not raw:
                 return
-            self._root = TreeNode(keys[0])
+            # Each entry is either None or a [key, value] pair
+            def _kv(entry: Any | None) -> tuple[Any, Any] | tuple[None, None]:
+                if entry is None:
+                    return None, None
+                if isinstance(entry, list) and len(entry) == 2:
+                    return entry[0], entry[1]
+                # Legacy format — plain key without value
+                return entry, None
+
+            key0, val0 = _kv(raw[0])
+            self._root = TreeNode(key0, val0)
             self._size = 1
             queue: collections.deque[TreeNode] = collections.deque([self._root])
             i = 1
-            while queue and i < len(keys):
+            while queue and i < len(raw):
                 node = queue.popleft()
-                if i < len(keys) and keys[i] is not None:
-                    node.left = TreeNode(keys[i])
+                if i < len(raw) and raw[i] is not None:
+                    k, v = _kv(raw[i])
+                    node.left = TreeNode(k, v)
                     self._size += 1
                     queue.append(node.left)
                 i += 1
-                if i < len(keys) and keys[i] is not None:
-                    node.right = TreeNode(keys[i])
+                if i < len(raw) and raw[i] is not None:
+                    k, v = _kv(raw[i])
+                    node.right = TreeNode(k, v)
                     self._size += 1
                     queue.append(node.right)
                 i += 1
@@ -764,49 +801,6 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             return
         self._leaves(node.left, result)
         self._leaves(node.right, result)
-
-    def vertical_order(self) -> list[list[Any]]:
-        """Return keys grouped by vertical column, left to right.
-
-        Each inner list contains the keys at the same horizontal distance
-        from the root, sorted top-to-bottom within the column.
-        """
-        if self._root is None:
-            return []
-        col_map: dict[int, list[Any]] = collections.defaultdict(list)
-        queue: collections.deque[tuple[TreeNode, int]] = collections.deque([(self._root, 0)])
-        while queue:
-            node, col = queue.popleft()
-            col_map[col].append(node.key)
-            if node.left:
-                queue.append((node.left, col - 1))
-            if node.right:
-                queue.append((node.right, col + 1))
-        return [col_map[c] for c in sorted(col_map)]
-
-    def zigzag_order(self) -> list[list[Any]]:
-        """Return keys level by level, alternating left-to-right and right-to-left."""
-        if self._root is None:
-            return []
-        result: list[list[Any]] = []
-        queue: collections.deque[TreeNode] = collections.deque([self._root])
-        left_to_right = True
-        while queue:
-            level_size = len(queue)
-            level: collections.deque[Any] = collections.deque()
-            for _ in range(level_size):
-                node = queue.popleft()
-                if left_to_right:
-                    level.append(node.key)
-                else:
-                    level.appendleft(node.key)
-                if node.left:
-                    queue.append(node.left)
-                if node.right:
-                    queue.append(node.right)
-            result.append(list(level))
-            left_to_right = not left_to_right
-        return result
 
     # ------------------------------------------------------------------
     # Traversal helpers
@@ -931,6 +925,10 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     # Dunder methods
     # ------------------------------------------------------------------
 
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._size > 0
+
     def __len__(self) -> int:
         """Return the number of nodes in the tree."""
         return self.size()
@@ -944,6 +942,24 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             keys = list(self._traverse("inorder"))
         return iter(keys)
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "BinarySearchTree",
+                "size": self._size,
+                "height": self.height(),
+                "allow_duplicates": self._allow_duplicates,
+                "root": repr(self._root.key) if self._root else None,
+            }
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two trees contain the same keys."""
+        if not isinstance(other, BinarySearchTree):
+            return NotImplemented
+        with self._lock:
+            return list(self) == list(other)
 
     def __repr__(self) -> str:  # pragma: no cover
         with self._lock:

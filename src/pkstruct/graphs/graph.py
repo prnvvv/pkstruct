@@ -234,6 +234,70 @@ class Graph(HelpMixin, StrMixin):
         with self._lock:
             return len(self._adj) == 0
 
+    def validate(self) -> bool:
+        """Verify internal graph consistency.
+
+        Checks:
+          1. All adjacency entries reference existing vertices.
+          2. Edge count matches actual stored edges.
+          3. For undirected graphs, adjacency is symmetric.
+
+        Returns
+        -------
+        bool
+            *True* if all invariants hold.
+        """
+        with self._lock:
+            for u in self._adj:
+                for v in self._adj[u]:
+                    if v not in self._adj:
+                        return False
+            actual = sum(len(nbrs) for nbrs in self._adj.values())
+            if not self._directed:
+                actual //= 2
+            if actual != self._edge_count:
+                return False
+            if not self._directed:
+                for u in self._adj:
+                    for v in self._adj[u]:
+                        if u not in self._adj[v] or self._adj[u][v] != self._adj[v][u]:
+                            return False
+            return True
+
+    def to_list(self) -> list[Any]:
+        """Return a list of all vertices in the graph."""
+        return self.get_vertices()
+
+    @classmethod
+    def from_list(cls, items: list[Any]) -> Graph:
+        """Create a graph from a list of vertices and/or edges.
+
+        Each item can be:
+          - A hashable vertex to add.
+          - A ``(u, v)`` tuple to add an edge with default weight.
+          - A ``(u, v, weight)`` tuple to add a weighted edge.
+
+        Parameters
+        ----------
+        items:
+            List of vertices and/or edge tuples.
+
+        Returns
+        -------
+        Graph
+        """
+        g = cls()
+        for item in items:
+            if isinstance(item, tuple) and len(item) == 3:
+                u, v, w = item
+                g.add_edge(u, v, w)
+            elif isinstance(item, tuple) and len(item) == 2:
+                u, v = item
+                g.add_edge(u, v)
+            else:
+                g.add_vertex(item)
+        return g
+
     def copy(self) -> Graph:
         """Return a deep copy of the graph."""
         with self._lock:
@@ -243,9 +307,25 @@ class Graph(HelpMixin, StrMixin):
             new_graph._edge_count = self._edge_count
             return new_graph
 
+    def visualize(self, show_weights: bool = True) -> str:
+        """Return an ASCII representation of the graph.
+
+        Parameters
+        ----------
+        show_weights:
+            If *True*, display edge weights.
+        """
+        from pkstruct.graphs.visualization import visualize as _viz
+
+        return _viz(self, show_weights=show_weights)
+
     # ------------------------------------------------------------------
     # Dunders
     # ------------------------------------------------------------------
+
+    def __bool__(self) -> bool:
+        """Return True if the graph has at least one vertex."""
+        return self.order() > 0
 
     def __len__(self) -> int:
         return self.order()
@@ -262,3 +342,25 @@ class Graph(HelpMixin, StrMixin):
             vertices = list(self._adj.keys())
             edges = self.get_edges()
             return f"Graph(directed={self._directed}, vertices={len(vertices)}, edges={len(edges)})"
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two graphs have the same vertices, edges, and weights."""
+        if not isinstance(other, Graph):
+            return NotImplemented
+        with self._lock:
+            return (
+                self._directed == other._directed
+                and self._edge_count == other._edge_count
+                and self._adj == other._adj
+            )
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": type(self).__name__,
+                "directed": self._directed,
+                "vertices": len(self._adj),
+                "edges": self._edge_count,
+                "adjacency": {k: dict(v) for k, v in self._adj.items()},
+            }

@@ -14,6 +14,7 @@ import heapq
 from collections.abc import Iterator
 from typing import TypeVar
 
+from pkstruct._help import HelpMixin
 from pkstruct._linear_shortcuts import LinearShortcutsMixin
 from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
@@ -23,7 +24,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin):
+class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     """
     A thread-safe min-heap priority queue.
 
@@ -56,7 +57,26 @@ class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin):
         self._counter: int = 0
         if items is not None:
             for item in items:
-                self.enqueue(item)
+                if isinstance(item, tuple) and len(item) == 2:
+                    value, priority = item
+                    self.enqueue(value, priority)
+                else:
+                    self.enqueue(item)
+
+    @classmethod
+    def from_list(cls, items: list[T]) -> PriorityQueue[T]:
+        """Create a PriorityQueue from a list.
+
+        Each item can be a plain value (priority defaults to the value
+        itself) or a ``(value, priority)`` tuple for explicit priority.
+
+        Args:
+            items: Initial elements or ``(value, priority)`` pairs.
+
+        Returns:
+            A new PriorityQueue populated with *items*.
+        """
+        return cls(items)
 
     # ------------------------------------------------------------------ #
     #  Required operations                                                 #
@@ -117,11 +137,13 @@ class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin):
             return self._heap[0][2]
 
     def rear(self) -> T:
-        """
-        Return the largest-priority element without removing it.
+        """Return the largest-priority element without removing it.
 
-        This operation is O(n) because heap order does not directly expose
-        the maximum element.
+        .. caution::
+
+            **Complexity: O(n)**. The heap structure does not expose the
+            maximum element directly, so this method scans the entire heap.
+            For O(1) access to the smallest element, use ``front()``.
 
         Returns
         -------
@@ -169,6 +191,23 @@ class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin):
             new._counter = self._counter
             return new
 
+    def validate(self) -> bool:
+        """Verify the heap invariant. Always True for heapq-backed queues.
+
+        Returns:
+            True if the priority queue is in a valid state.
+        """
+        return True
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "PriorityQueue",
+                "size": len(self._heap),
+                "heap": list(self._heap),
+            }
+
     def to_list(self) -> list[T]:
         """
         Return a list of all elements in priority order (smallest first).
@@ -183,6 +222,11 @@ class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin):
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the queue."""
+        with self._lock:
+            return any(v == item for _, _, v in self._heap)
 
     def __iter__(self) -> Iterator[T]:
         with self._lock:

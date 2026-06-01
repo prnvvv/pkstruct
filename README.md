@@ -563,7 +563,7 @@ list(sll)          # [1, 2, 3]
 len(sll)           # 3
 bool(sll)          # True (False when empty)
 repr(sll)          # SinglyLinkedList([1, 2, 3])
-str(sll)           # "1 2 3"  (space-separated values)
+str(sll)           # "[1, 2, 3]"
 42 in sll          # True / False
 sll == other       # value equality
 ```

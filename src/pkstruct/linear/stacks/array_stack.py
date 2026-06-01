@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar
 
+from pkstruct._help import HelpMixin
 from pkstruct._linear_shortcuts import LinearShortcutsMixin
 from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
@@ -21,7 +22,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin):
+class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     """
     A thread-safe stack backed by a Python ``list``.
 
@@ -49,6 +50,18 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin):
     def __init__(self, items: list[T] | None = None) -> None:
         self._data: list[T] = list(items) if items is not None else []
         self._lock: StructureLock = StructureLock()
+
+    @classmethod
+    def from_list(cls, items: list[T]) -> ArrayStack[T]:
+        """Create an ArrayStack from a list.
+
+        Args:
+            items: Initial elements (bottom-to-top order).
+
+        Returns:
+            A new ArrayStack populated with *items*.
+        """
+        return cls(items)
 
     # ------------------------------------------------------------------ #
     #  Required operations                                                 #
@@ -132,6 +145,23 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin):
             new._data = self._data.copy()
             return new
 
+    def validate(self) -> bool:
+        """Verify internal consistency. Always True for array-backed stacks.
+
+        Returns:
+            True if the stack is in a valid state.
+        """
+        return True
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "ArrayStack",
+                "size": len(self._data),
+                "data": list(self._data),
+            }
+
     def to_list(self) -> list[T]:
         """
         Return a list of all elements, from top to bottom.
@@ -146,6 +176,11 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin):
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the stack."""
+        with self._lock:
+            return item in self._data
 
     def __iter__(self) -> Iterator[T]:
         with self._lock:

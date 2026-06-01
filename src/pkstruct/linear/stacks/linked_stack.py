@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar, cast
 
+from pkstruct._help import HelpMixin
 from pkstruct._linear_shortcuts import LinearShortcutsMixin
 from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
@@ -23,7 +24,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class LinkedStack(Stack[T], StrMixin, LinearShortcutsMixin):
+class LinkedStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     """
     A thread-safe stack implemented on top of ``SinglyLinkedList``.
 
@@ -54,6 +55,18 @@ class LinkedStack(Stack[T], StrMixin, LinearShortcutsMixin):
         if items is not None:
             for item in items:
                 self._list.insert(item, position=0)
+
+    @classmethod
+    def from_list(cls, items: list[T]) -> LinkedStack[T]:
+        """Create a LinkedStack from a list.
+
+        Args:
+            items: Initial elements (bottom-to-top order).
+
+        Returns:
+            A new LinkedStack populated with *items*.
+        """
+        return cls(items)
 
     # ------------------------------------------------------------------ #
     #  Required operations                                                 #
@@ -136,6 +149,23 @@ class LinkedStack(Stack[T], StrMixin, LinearShortcutsMixin):
             new._list = cast(SinglyLinkedList[T], self._list.copy())
             return new
 
+    def validate(self) -> bool:
+        """Verify internal consistency. Delegates to the underlying linked list.
+
+        Returns:
+            True if the stack is in a valid state.
+        """
+        return self._list.validate()
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "LinkedStack",
+                "size": self._list.size(),
+                "values": self.to_list(),
+            }
+
     def to_list(self) -> list[T]:
         """
         Return a list of all elements, from top to bottom.
@@ -149,6 +179,11 @@ class LinkedStack(Stack[T], StrMixin, LinearShortcutsMixin):
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the stack."""
+        with self._lock:
+            return item in self._list
 
     def __iter__(self) -> Iterator[T]:
         with self._lock:

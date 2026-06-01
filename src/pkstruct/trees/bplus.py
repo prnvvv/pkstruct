@@ -85,6 +85,17 @@ class BPlusTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         self._size: int = 0
         self._lock: StructureLock = StructureLock()
 
+    @classmethod
+    def from_list(cls, items: list[Any], order: int = 3, allow_duplicates: bool = False) -> BPlusTree:
+        tree = cls(order=order, allow_duplicates=allow_duplicates)
+        for key in items:
+            tree.insert(key)
+        return tree
+
+    def to_list(self) -> list[Any]:
+        """Return all keys in ascending order."""
+        return list(self)
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -407,9 +418,37 @@ class BPlusTree(HelpMixin, StrMixin, TreeShortcutsMixin):
                 child_hi = hi if i == kc else node.keys[i]
                 self._validate(child, child_lo, child_hi, depth + 1, leaf_depths)
 
+    def copy(self) -> BPlusTree:
+        """Return a shallow copy of this tree (new structure, same key/value pairs)."""
+        with self._lock:
+            new_tree = BPlusTree(order=self._order, allow_duplicates=self._allow_duplicates)
+            new_tree._size = self._size
+            new_tree._root, new_tree._first_leaf = self._copy_subtree(self._root)
+            return new_tree
+
+    def _copy_subtree(self, node: BPlusNode) -> tuple[BPlusNode, BPlusNode]:
+        new_node = BPlusNode(is_leaf=node.is_leaf)
+        new_node.keys = list(node.keys)
+        new_node.values = list(node.values)
+        first_leaf = new_node if new_node.is_leaf else None
+        if not node.is_leaf:
+            copied_children = []
+            for child in node.children:
+                copied_child, child_first = self._copy_subtree(child)
+                copied_child.parent = new_node
+                copied_children.append(copied_child)
+                if child_first is not None:
+                    first_leaf = child_first
+            new_node.children = copied_children
+        return new_node, first_leaf
+
     # ------------------------------------------------------------------
     # Dunder methods
     # ------------------------------------------------------------------
+
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._size > 0
 
     def __len__(self) -> int:
         return self.size()
@@ -426,3 +465,18 @@ class BPlusTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             keys = list(self.leaf_traversal())
             return f"BPlusTree(size={self._size}, order={self._order}, keys={keys})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, BPlusTree):
+            return NotImplemented
+        with self._lock:
+            return list(self) == list(other)
+
+    def debug(self) -> dict[str, object]:
+        with self._lock:
+            return {
+                "type": "BPlusTree",
+                "order": self._order,
+                "size": self._size,
+                "allow_duplicates": self._allow_duplicates,
+            }

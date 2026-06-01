@@ -336,16 +336,21 @@ class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin
         shift: int = 1,
         start: int | None = None,
         end: int | None = None,
-        direction: bool = True,
+        direction: str = "right",
     ) -> None:
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate an empty list")
 
+            if direction not in ("left", "right"):
+                raise ValidationError(
+                    f"Invalid direction {direction!r}. Choose 'left' or 'right'."
+                )
+
             actual_shift = shift
             if shift < 0:
                 actual_shift = abs(shift)
-                direction = False
+                direction = "left" if direction == "right" else "right"
 
             actual_start = 0 if start is None else start
             actual_end = self._size - 1 if end is None else end
@@ -365,7 +370,7 @@ class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin
             if effective_shift == 0:
                 return
 
-            if not direction:
+            if direction == "left":
                 effective_shift = length - effective_shift
 
             self._tracer.record(
@@ -586,6 +591,55 @@ class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin
     def tail(self) -> Any:
         with self._lock:
             return self._tail
+
+    # ------------------------------------------------------------------ #
+    #  Validation & Debugging                                               #
+    # ------------------------------------------------------------------ #
+
+    def validate(self) -> bool:
+        """Verify internal consistency of the linked list.
+
+        Returns:
+            True if the list is in a valid state.
+
+        Raises:
+            ValidationError: If any invariant is violated.
+        """
+        with self._lock:
+            if self._size == 0:
+                if self._head is not None or self._tail is not None:
+                    raise ValidationError("Empty list must have None head and tail.")
+                return True
+            if self._head is None:
+                raise ValidationError("Non-empty list must have a head.")
+            if self._tail is None:
+                raise ValidationError("Non-empty list must have a tail.")
+            if self._size < 0:
+                raise ValidationError(f"Negative size: {self._size}.")
+            count = 0
+            node = self._head
+            for _ in range(self._size):
+                if node is None:
+                    raise ValidationError("Chain ended before reaching expected size.")
+                count += 1
+                node = node.next
+            if count != self._size:
+                raise ValidationError(
+                    f"Node count ({count}) does not match size ({self._size})."
+                )
+            return True
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": type(self).__name__,
+                "size": self._size,
+                "head": self._head.value if self._head else None,
+                "tail": self._tail.value if self._tail else None,
+                "values": self._to_list_unsafe(),
+                "events": self._tracer.get_events(),
+            }
 
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                       #

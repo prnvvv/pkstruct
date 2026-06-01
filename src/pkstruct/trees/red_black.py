@@ -104,6 +104,26 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         self._allow_duplicates = allow_duplicates
         self._lock: StructureLock = StructureLock()
 
+    @classmethod
+    def from_list(cls, items: list[Any], allow_duplicates: bool = False) -> RedBlackTree:
+        """Create a Red-Black Tree from a list of keys.
+
+        Args:
+            items: List of keys to insert.
+            allow_duplicates: Whether to allow duplicate keys (default: False).
+
+        Returns:
+            A new RedBlackTree populated with *items*.
+        """
+        tree = cls(allow_duplicates=allow_duplicates)
+        for key in items:
+            tree.insert(key)
+        return tree
+
+    def to_list(self) -> list[Any]:
+        """Return all keys in ascending (in-order) order."""
+        return list(self)
+
     # ------------------------------------------------------------------
     # Core CRUD
     # ------------------------------------------------------------------
@@ -243,7 +263,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             target = self._find(self._root, key)
             if _is_nil(target):
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             self._rb_delete(target)
             self._size -= 1
 
@@ -422,7 +442,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             node = self._find(self._root, key)
             if _is_nil(node):
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             node.value = value
 
     def clear(self) -> None:
@@ -517,7 +537,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             if not self.contains(key):
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             pred: RBNode | None = None
             node: RBNode = self._root
             while not _is_nil(node):
@@ -542,7 +562,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             if not self.contains(key):
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             succ: RBNode | None = None
             node: RBNode = self._root
             while not _is_nil(node):
@@ -692,6 +712,10 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     # Dunder methods
     # ------------------------------------------------------------------
 
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._size > 0
+
     def __len__(self) -> int:
         """Return the number of nodes in the tree."""
         return self.size()
@@ -711,3 +735,21 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             keys = list(self._inorder(self._root))
             bh = self.black_height()
             return f"RedBlackTree(size={self._size}, black_height={bh}, keys={keys})"
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two red-black trees contain the same keys."""
+        if not isinstance(other, RedBlackTree):
+            return NotImplemented
+        with self._lock:
+            return list(self) == list(other)
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "RedBlackTree",
+                "size": self._size,
+                "height": self.height(),
+                "black_height": self.black_height(),
+                "allow_duplicates": self._allow_duplicates,
+            }

@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar
 
+from pkstruct._help import HelpMixin
 from pkstruct._linear_shortcuts import LinearShortcutsMixin
 from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
@@ -30,7 +31,7 @@ class QueueFullError(IndexError):
         super().__init__(f"Queue is at capacity ({capacity}).")
 
 
-class CircularQueue(Queue[T], StrMixin, LinearShortcutsMixin):
+class CircularQueue(Queue[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     """
     A thread-safe, fixed-capacity FIFO queue using a ring buffer.
 
@@ -72,6 +73,20 @@ class CircularQueue(Queue[T], StrMixin, LinearShortcutsMixin):
                 raise ValueError(f"Initial items ({len(items)}) exceeds capacity ({capacity}).")
             for item in items:
                 self._enqueue_unsafe(item)
+
+    @classmethod
+    def from_list(cls, items: list[T], capacity: int | None = None) -> CircularQueue[T]:
+        """Create a CircularQueue from a list.
+
+        Args:
+            items: Initial elements (front-to-rear order).
+            capacity: Maximum capacity. Defaults to ``len(items)`` if not provided.
+
+        Returns:
+            A new CircularQueue populated with *items*.
+        """
+        cap = capacity if capacity is not None else len(items)
+        return cls(cap, items)
 
     # ------------------------------------------------------------------ #
     #  Internal helpers                                                    #
@@ -216,6 +231,26 @@ class CircularQueue(Queue[T], StrMixin, LinearShortcutsMixin):
             new._size = self._size
             return new
 
+    def validate(self) -> bool:
+        """Verify internal consistency of the ring buffer.
+
+        Returns:
+            True if the queue is in a valid state.
+        """
+        return 0 <= self._size <= self._capacity
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "CircularQueue",
+                "capacity": self._capacity,
+                "size": self._size,
+                "head": self._head,
+                "tail": self._tail,
+                "buffer": list(self._buffer),
+            }
+
     def to_list(self) -> list[T]:
         """
         Return a list of all elements, from front to rear.
@@ -237,6 +272,15 @@ class CircularQueue(Queue[T], StrMixin, LinearShortcutsMixin):
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the queue."""
+        with self._lock:
+            for i in range(self._size):
+                idx = (self._head + i) % self._capacity
+                if self._buffer[idx] == item:
+                    return True
+            return False
 
     def __iter__(self) -> Iterator[T]:
         with self._lock:

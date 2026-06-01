@@ -36,19 +36,26 @@ from pkstruct.graphs import (
     WeightedGraph,
     bfs,
     dfs,
+    bfs_paths,
+    dfs_paths,
     dijkstra,
     bellman_ford,
     floyd_warshall,
+    reconstruct_path,
+    reconstruct_path_fw,
     kruskal,
     prim,
     connected_components,
     is_bipartite,
+    is_connected,
     has_cycle,
+    has_cycle_directed,
     topological_sort_kahn,
     topological_sort_dfs,
     kosaraju,
     tarjan,
     visualize,
+    adjacency_matrix,
     GraphError,
     VertexNotFoundError,
     EdgeNotFoundError,
@@ -95,9 +102,7 @@ from pkstruct.trees import (
     TreeBalanceError,
     TreeError,
 )
-from pkstruct.trees import (
-    SerializationError as TreeSerializationError,
-)
+
 
 _STRUCTURES = [
     SinglyLinkedList,
@@ -164,19 +169,26 @@ __all__ = [
     "WeightedGraph",
     "bfs",
     "dfs",
+    "bfs_paths",
+    "dfs_paths",
     "dijkstra",
     "bellman_ford",
     "floyd_warshall",
+    "reconstruct_path",
+    "reconstruct_path_fw",
     "kruskal",
     "prim",
     "connected_components",
     "is_bipartite",
+    "is_connected",
     "has_cycle",
+    "has_cycle_directed",
     "topological_sort_kahn",
     "topological_sort_dfs",
     "kosaraju",
     "tarjan",
     "visualize",
+    "adjacency_matrix",
     "GraphError",
     "VertexNotFoundError",
     "EdgeNotFoundError",
@@ -218,10 +230,9 @@ __all__ = [
     "InvalidOrderError",
     "InvalidOperationError",
     "TreeBalanceError",
-    "TreeSerializationError",
     "InvalidIntervalError",
     "IndexOutOfBoundsError",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "pkstruct contributors"

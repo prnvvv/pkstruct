@@ -10,6 +10,8 @@ while still being able to distinguish individual error types.
 
 from __future__ import annotations
 
+from pkstruct.shared.exceptions import SerializationError as _SharedSerializationError
+
 __all__ = [
     "TreeError",
     "KeyNotFoundError",
@@ -72,7 +74,7 @@ class TreeBalanceError(TreeError):
     """Raised when an internal balance invariant is violated."""
 
 
-class SerializationError(TreeError):
+class SerializationError(TreeError, _SharedSerializationError):
     """Raised when tree (de)serialization fails."""
 
 

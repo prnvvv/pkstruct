@@ -79,6 +79,27 @@ class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         self._size: int = 0
         self._lock: StructureLock = StructureLock()
 
+    @classmethod
+    def from_list(cls, items: list[Any], order: int = 3, allow_duplicates: bool = False) -> BTree:
+        """Create a B-Tree from a list of keys.
+
+        Args:
+            items: List of keys to insert.
+            order: Minimum degree (default: 3).
+            allow_duplicates: Whether to allow duplicates (default: False).
+
+        Returns:
+            A new BTree populated with *items*.
+        """
+        tree = cls(order=order, allow_duplicates=allow_duplicates)
+        for key in items:
+            tree.insert(key)
+        return tree
+
+    def to_list(self) -> list[Any]:
+        """Return all keys in ascending order."""
+        return list(self)
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -472,9 +493,32 @@ class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             child_hi = hi if i == kc else node.keys[i]
             self._validate(child, child_lo, child_hi, depth + 1, leaf_depth)
 
+    def copy(self) -> BTree:
+        """Return a shallow copy of this tree (new root, same key/value pairs)."""
+        with self._lock:
+            new_tree = BTree(order=self._order, allow_duplicates=self._allow_duplicates)
+            new_tree._size = self._size
+            new_tree._root = self._copy_node(self._root)
+            return new_tree
+
+    def _copy_node(self, node: BTreeNode | None) -> BTreeNode:
+        if node is None:
+            return BTreeNode()
+        new_node = BTreeNode()
+        new_node.keys = list(node.keys)
+        new_node.values = list(node.values)
+        new_node.children = [self._copy_node(c) for c in node.children]
+        for child in new_node.children:
+            child.parent = new_node
+        return new_node
+
     # ------------------------------------------------------------------
     # Dunder methods
     # ------------------------------------------------------------------
+
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._size > 0
 
     def __len__(self) -> int:
         """Return the number of keys in the tree."""
@@ -505,3 +549,20 @@ class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             keys = list(self._inorder(self._root))
             return f"BTree(size={self._size}, order={self._order}, keys={keys})"
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two B-Trees contain the same keys."""
+        if not isinstance(other, BTree):
+            return NotImplemented
+        with self._lock:
+            return list(self) == list(other)
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "BTree",
+                "order": self._order,
+                "size": self._size,
+                "allow_duplicates": self._allow_duplicates,
+            }

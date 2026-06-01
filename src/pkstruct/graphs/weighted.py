@@ -35,3 +35,13 @@ class WeightedGraph(Graph):
             vertices = list(self._adj.keys())
             edges = self.get_edges()
             return f"WeightedGraph(vertices={len(vertices)}, edges={len(edges)})"
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "WeightedGraph",
+                "vertices": len(self._adj),
+                "edges": self._edge_count,
+                "adjacency": {k: dict(v) for k, v in self._adj.items()},
+            }

@@ -4,6 +4,19 @@ from typing import Any
 
 
 class TreeShortcutsMixin:
+    def visualize(self, style: str = "ascii") -> str:
+        from pkstruct.trees.visualization.tree_printer import TreeVisualizer
+
+        try:
+            return TreeVisualizer().visualize(self, style=style)
+        except TypeError:
+            items = list(self) if hasattr(self, "__iter__") else []
+            if style == "ascii":
+                return " -> ".join(str(v) for v in items)
+            if style == "compact":
+                return f"[{', '.join(str(v) for v in items)}]"
+            return " -> ".join(str(v) for v in items)
+
     def root(self) -> Any:
         """Return the root node of the tree, or *None* if empty."""
         return self._root

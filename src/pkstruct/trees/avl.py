@@ -140,7 +140,7 @@ class AVLTree(BinarySearchTree):
         with self._lock:
             self._root, deleted = self._avl_delete(self._root, key)
             if not deleted:
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             self._size -= 1
 
     def _avl_delete(
@@ -251,7 +251,7 @@ class AVLTree(BinarySearchTree):
         with self._lock:
             node = self._find(self._root, key)
             if node is None:
-                raise KeyError(key)
+                raise KeyError(f"Key not found: {key!r}")
             return get_balance_factor(node)
 
     # ------------------------------------------------------------------
@@ -259,7 +259,11 @@ class AVLTree(BinarySearchTree):
     # ------------------------------------------------------------------
 
     def serialize(self) -> str:
-        """Serialize the tree to a JSON string (level-order with null sentinels)."""
+        """Serialize the tree to a JSON string (level-order with null sentinels).
+
+        Each node is encoded as a ``[key, value]`` pair so values are
+        preserved across round-trips.
+        """
         with self._lock:
             if self._root is None:
                 return "[]"
@@ -270,7 +274,7 @@ class AVLTree(BinarySearchTree):
                 if node is None:
                     result.append(None)
                 else:
-                    result.append(node.key)
+                    result.append([node.key, node.value])
                     q.append(node.left)
                     q.append(node.right)
             while result and result[-1] is None:
@@ -281,22 +285,32 @@ class AVLTree(BinarySearchTree):
         """Rebuild the tree from a JSON string, creating AVLNodes."""
         with self._lock:
             self.clear()
-            keys: list[Any | None] = json.loads(data)
-            if not keys:
+            raw: list[Any | None] = json.loads(data)
+            if not raw:
                 return
-            self._root = AVLNode(keys[0])
+            def _kv(entry: Any | None) -> tuple[Any, Any] | tuple[None, None]:
+                if entry is None:
+                    return None, None
+                if isinstance(entry, list) and len(entry) == 2:
+                    return entry[0], entry[1]
+                return entry, None
+
+            key0, val0 = _kv(raw[0])
+            self._root = AVLNode(key0, val0)
             self._size = 1
             q: collections.deque[AVLNode] = collections.deque([self._root])
             i = 1
-            while q and i < len(keys):
+            while q and i < len(raw):
                 node = q.popleft()
-                if i < len(keys) and keys[i] is not None:
-                    node.left = AVLNode(keys[i])
+                if i < len(raw) and raw[i] is not None:
+                    k, v = _kv(raw[i])
+                    node.left = AVLNode(k, v)
                     self._size += 1
                     q.append(node.left)
                 i += 1
-                if i < len(keys) and keys[i] is not None:
-                    node.right = AVLNode(keys[i])
+                if i < len(raw) and raw[i] is not None:
+                    k, v = _kv(raw[i])
+                    node.right = AVLNode(k, v)
                     self._size += 1
                     q.append(node.right)
                 i += 1

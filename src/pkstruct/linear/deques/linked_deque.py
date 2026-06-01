@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Literal, TypeVar, cast
 
+from pkstruct._help import HelpMixin
 from pkstruct._linear_shortcuts import LinearShortcutsMixin
 from pkstruct._str import StrMixin
 from pkstruct.linear.deques.deque import Deque
@@ -24,7 +25,7 @@ T = TypeVar("T")
 _Side = Literal["left", "right"]
 
 
-class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
+class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     """
     A thread-safe double-ended queue implemented on top of ``DoublyLinkedList``.
 
@@ -59,9 +60,26 @@ class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
             for item in items:
                 self._list.insert(item)
 
+    @classmethod
+    def from_list(cls, items: list[T]) -> LinkedDeque[T]:
+        """Create a LinkedDeque from a list.
+
+        Args:
+            items: Initial elements (left-to-right order).
+
+        Returns:
+            A new LinkedDeque populated with *items*.
+        """
+        return cls(items)
+
     # ------------------------------------------------------------------ #
     #  Core operations                                                     #
     # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _validate_side(side: str) -> None:
+        if side not in ("left", "right"):
+            raise ValueError(f"Invalid side: {side!r}. Must be 'left' or 'right'.")
 
     def append(self, value: T, side: _Side = "right") -> None:
         """
@@ -74,6 +92,7 @@ class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
         side:
             ``"left"`` to prepend, ``"right"`` to append (default).
         """
+        self._validate_side(side)
         with self._lock:
             if side == "left":
                 self._list.insert(value, position=0)
@@ -99,6 +118,7 @@ class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
         EmptyStructureError
             If the deque is empty.
         """
+        self._validate_side(side)
         with self._lock:
             if self._list.is_empty():
                 raise EmptyStructureError("pop from an empty deque")
@@ -126,9 +146,10 @@ class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
         EmptyStructureError
             If the deque is empty.
         """
+        self._validate_side(side)
         with self._lock:
             if self._list.is_empty():
-                raise EmptyStructureError("peek at an empty deque")
+                raise EmptyStructureError("peek from an empty deque")
             if side == "left":
                 return self._list.get(0)
             sz = self._list.size()
@@ -173,12 +194,34 @@ class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
             new._list = cast(DoublyLinkedList[T], self._list.copy())
             return new
 
+    def validate(self) -> bool:
+        """Verify internal consistency. Delegates to the underlying linked list.
+
+        Returns:
+            True if the deque is in a valid state.
+        """
+        return self._list.validate()
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "LinkedDeque",
+                "size": self._list.size(),
+                "values": self.to_list(),
+            }
+
     def to_list(self) -> list[T]:
         return self._list.to_list()
 
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the deque."""
+        with self._lock:
+            return item in self._list
 
     def __iter__(self) -> Iterator[T]:
         with self._lock:

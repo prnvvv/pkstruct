@@ -258,6 +258,25 @@ class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         self._size: int = 0
         self._lock: StructureLock = StructureLock()
 
+    @classmethod
+    def from_list(cls, items: list[tuple[int, int]]) -> IntervalTree:
+        """Create an IntervalTree from a list of (start, end) tuples.
+
+        Args:
+            items: List of (start, end) intervals to insert.
+
+        Returns:
+            A new IntervalTree populated with *items*.
+        """
+        tree = cls()
+        for start, end in items:
+            tree.insert(start, end)
+        return tree
+
+    def to_list(self) -> list[tuple[int, int]]:
+        """Return all intervals in ascending order of start."""
+        return list(self)
+
     # ------------------------------------------------------------------
     # Insert / delete
     # ------------------------------------------------------------------
@@ -494,9 +513,31 @@ class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             return self._root.max_end if self._root is not None else None
 
+    def copy(self) -> IntervalTree:
+        """Return a shallow copy of this interval tree."""
+        with self._lock:
+            new_tree = IntervalTree()
+            new_tree._size = self._size
+            new_tree._root = self._copy_node(self._root)
+            return new_tree
+
+    def _copy_node(self, node: _INode | None) -> _INode | None:
+        if node is None:
+            return None
+        new_node = _INode(node.start, node.end)
+        new_node.max_end = node.max_end
+        new_node.height = node.height
+        new_node.left = self._copy_node(node.left)
+        new_node.right = self._copy_node(node.right)
+        return new_node
+
     # ------------------------------------------------------------------
     # Dunder
     # ------------------------------------------------------------------
+
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._size > 0
 
     def __len__(self) -> int:
         """Return number of intervals. Complexity: O(1)."""
@@ -542,3 +583,20 @@ class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
                 f"height={self.height()}, "
                 f"max_endpoint={self.max_endpoint})"
             )
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two interval trees contain the same intervals."""
+        if not isinstance(other, IntervalTree):
+            return NotImplemented
+        with self._lock:
+            return list(self) == list(other)
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "IntervalTree",
+                "size": self._size,
+                "height": self.height(),
+                "max_endpoint": self.max_endpoint,
+            }

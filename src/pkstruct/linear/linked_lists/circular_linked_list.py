@@ -135,15 +135,19 @@ class CircularLinkedList(_LinkedListBase[T]):
             self._head = self._head.next
             self._tail = self._tail.next
 
-    def rotate_head(self, steps: int = 1, direction: bool = True) -> None:
+    def rotate_head(self, steps: int = 1, direction: str = "right") -> None:
         with self._lock:
             if self._size == 0:
                 raise EmptyStructureError("rotate_head on an empty list")
+            if direction not in ("left", "right"):
+                raise ValidationError(
+                    f"Invalid direction {direction!r}. Choose 'left' or 'right'."
+                )
             self._tracer.record("rotate_head", steps=steps, direction=direction)
             steps = steps % self._size
             if steps == 0:
                 return
-            if not direction:
+            if direction == "right":
                 steps = self._size - steps
             for _ in range(steps):
                 self._tail = self._head

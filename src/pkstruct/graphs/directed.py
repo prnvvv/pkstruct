@@ -93,3 +93,15 @@ class DirectedGraph(Graph):
             vertices = list(self._adj.keys())
             edges = self.get_edges()
             return f"DirectedGraph(vertices={len(vertices)}, edges={len(edges)})"
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "DirectedGraph",
+                "vertices": len(self._adj),
+                "edges": self._edge_count,
+                "sources": self.sources(),
+                "sinks": self.sinks(),
+                "adjacency": {k: dict(v) for k, v in self._adj.items()},
+            }

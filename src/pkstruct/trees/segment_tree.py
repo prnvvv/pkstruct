@@ -28,7 +28,7 @@ Complexity:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from math import gcd
 
 from pkstruct._help import HelpMixin
@@ -100,6 +100,14 @@ class SegmentTree(HelpMixin, StrMixin):
         >>> st.update(1, 10)
         >>> st.query(1, 3)
         22
+
+    .. important::
+
+        All index parameters (*left*, *right*, *index*) are **0-based**,
+        following Python's standard sequence indexing convention. Index 0
+        corresponds to the first element of the data sequence. This differs
+        from ``FenwickTree`` (which uses 1-based indexing), so take care
+        when switching between the two structures.
     """
 
     def __init__(
@@ -125,6 +133,24 @@ class SegmentTree(HelpMixin, StrMixin):
         if not data:
             raise ValueError("Cannot build a segment tree from an empty sequence.")
         self.build(data)
+
+    @classmethod
+    def from_list(cls, items: list[int], operation: str = "sum") -> SegmentTree:
+        """Create a SegmentTree from a list of integers.
+
+        Args:
+            items: Sequence of integers.
+            operation: Aggregate operation (default: "sum").
+
+        Returns:
+            A new SegmentTree built from *items*.
+        """
+        return cls(items, operation=operation)
+
+    def to_list(self) -> list[int]:
+        """Return the original array values in 0-based order."""
+        with self._lock:
+            return [self.query(i, i) for i in range(self._n)]
 
     # ------------------------------------------------------------------
     # Build
@@ -368,6 +394,21 @@ class SegmentTree(HelpMixin, StrMixin):
         # Note: with pending lazy values the internal node may differ; skip check
         return self._tree[node]
 
+    def copy(self) -> SegmentTree:
+        """Return a shallow copy of this segment tree."""
+        with self._lock:
+            new_tree = SegmentTree.__new__(SegmentTree)
+            new_tree._operation_name = self._operation_name
+            new_tree._op = self._op
+            new_tree._identity = self._identity
+            new_tree._lazy_combine = self._lazy_combine
+            new_tree._lazy_propagate = self._lazy_propagate
+            new_tree._n = self._n
+            new_tree._tree = list(self._tree)
+            new_tree._lazy = list(self._lazy)
+            new_tree._lock = StructureLock()
+            return new_tree
+
     # ------------------------------------------------------------------
     # Properties / dunder
     # ------------------------------------------------------------------
@@ -377,13 +418,49 @@ class SegmentTree(HelpMixin, StrMixin):
         """Number of elements in the segment tree."""
         return self._n
 
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the tree."""
+        with self._lock:
+            return item in self.to_list()
+
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._n > 0
+
     def __len__(self) -> int:
         """Return number of elements. Complexity: O(1)."""
         return self._n
 
+    def __iter__(self) -> Iterator[int]:
+        """Iterate over elements in 0-based order."""
+        with self._lock:
+            return iter(self.to_list())
+
     def __repr__(self) -> str:
         with self._lock:
             return f"SegmentTree(size={self._n}, operation='{self._operation_name}')"
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two segment trees have the same data and operation."""
+        if not isinstance(other, SegmentTree):
+            return NotImplemented
+        with self._lock:
+            return (
+                self._n == other._n
+                and self._operation_name == other._operation_name
+                and self._tree == other._tree
+            )
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "SegmentTree",
+                "size": self._n,
+                "operation": self._operation_name,
+                "tree": list(self._tree),
+                "lazy": list(self._lazy),
+            }
 
     # ------------------------------------------------------------------
     # Internal validation helpers

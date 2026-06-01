@@ -29,7 +29,7 @@ Complexity:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 
 from pkstruct._help import HelpMixin
 from pkstruct._str import StrMixin
@@ -66,6 +66,14 @@ class FenwickTree(HelpMixin, StrMixin):
         25
         >>> ft.lower_bound(25)
         6
+
+    .. important::
+
+        All public index parameters are **1-based** (1..n). Index 1 corresponds
+        to the first element of the data sequence. This follows the standard
+        Fenwick Tree / Binary Indexed Tree convention from the literature.
+        If you are accustomed to Python's 0-based indexing, remember to add 1
+        when accessing the i-th element.
     """
 
     def __init__(
@@ -83,6 +91,29 @@ class FenwickTree(HelpMixin, StrMixin):
         else:
             self._n = n  # type: ignore[assignment]
             self._tree = [0] * (self._n + 1)
+
+    @classmethod
+    def from_list(cls, items: list[int]) -> FenwickTree:
+        """Create a FenwickTree from a list of integers.
+
+        This is equivalent to ``FenwickTree(items)``, provided for
+        consistency with other pkstruct structures.
+
+        Args:
+            items: Sequence of integers.
+
+        Returns:
+            A new FenwickTree built from *items*.
+        """
+        return cls(items)
+
+    def to_list(self) -> list[int]:
+        """Return the original array values (1-based order).
+
+        Complexity: O(n log n)
+        """
+        with self._lock:
+            return [self.range_query(i, i) for i in range(1, self._n + 1)]
 
     # ------------------------------------------------------------------
     # Build
@@ -291,17 +322,56 @@ class FenwickTree(HelpMixin, StrMixin):
                     )
             return True
 
+    def copy(self) -> FenwickTree:
+        """Return a shallow copy of this Fenwick tree."""
+        with self._lock:
+            new_tree = FenwickTree.__new__(FenwickTree)
+            new_tree._n = self._n
+            new_tree._tree = list(self._tree)
+            new_tree._lock = StructureLock()
+            return new_tree
+
     # ------------------------------------------------------------------
     # Dunder
     # ------------------------------------------------------------------
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if item is in the tree."""
+        with self._lock:
+            return item in self.to_list()
+
+    def __bool__(self) -> bool:
+        """Return True if the tree is non-empty."""
+        return self._n > 0
 
     def __len__(self) -> int:
         """Return number of elements. Complexity: O(1)."""
         return self._n
 
+    def __iter__(self) -> Iterator[int]:
+        """Iterate over elements in 1-based order."""
+        with self._lock:
+            return iter(self.to_list())
+
     def __repr__(self) -> str:
         with self._lock:
             return f"FenwickTree(size={self._n})"
+
+    def __eq__(self, other: object) -> bool:
+        """Return True if two Fenwick trees have the same size and elements."""
+        if not isinstance(other, FenwickTree):
+            return NotImplemented
+        with self._lock:
+            return self._n == other._n and self._tree == other._tree
+
+    def debug(self) -> dict[str, object]:
+        """Return internal state for debugging purposes."""
+        with self._lock:
+            return {
+                "type": "FenwickTree",
+                "size": self._n,
+                "tree": list(self._tree),
+            }
 
     # ------------------------------------------------------------------
     # Internal helpers
