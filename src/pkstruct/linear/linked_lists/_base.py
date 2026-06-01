@@ -587,10 +587,10 @@ class _LinkedListBase(Generic[T], ABC):
         return self.size()
 
     def __bool__(self) -> bool:
-        return self._size > 0
+        return self.size() > 0
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self._to_list_unsafe()!r})"
+        return f"{type(self).__name__}({self.to_list()!r})"
 
     def __contains__(self, item: object) -> bool:
         with self._lock:
@@ -605,4 +605,4 @@ class _LinkedListBase(Generic[T], ABC):
     def __eq__(self, other: object) -> bool:
         if type(other) is not type(self):
             return NotImplemented
-        return self._to_list_unsafe() == other._to_list_unsafe()
+        return self.to_list() == other.to_list()

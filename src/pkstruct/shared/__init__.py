@@ -64,5 +64,4 @@ __all__ = [
     "compare",
     # visualization
     "Visualizable",
-    "StructureLock"
 ]

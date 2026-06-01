@@ -413,7 +413,6 @@ sll == other       # value equality
 ```bash
 pip install -e ".[dev]"
 pytest src/pkstruct/linear/tests src/pkstruct/trees/tests src/pkstruct/graphs/tests -v
-python run_all_tests.py
 ```
 
 ## Publishing
