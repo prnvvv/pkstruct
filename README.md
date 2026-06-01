@@ -17,7 +17,8 @@ pip install pkstruct
 ## Quick Start
 
 ```python
-from pkstruct.linear import SinglyLinkedList, DoublyLinkedList, CircularLinkedList
+import pkstruct
+from pkstruct.linear import SinglyLinkedList, DoublyLinkedList
 
 # Singly Linked List
 sll = SinglyLinkedList.from_list([1, 2, 3, 4, 5])
@@ -26,17 +27,16 @@ sll.sort()                       # [1, 2, 3, 4, 5, 99]
 print(sll.visualize())
 # [1] -> [2] -> [3] -> [4] -> [5] -> [99] -> NULL
 
-# Doubly Linked List
+# Node navigation on linear structures
 dll = DoublyLinkedList.from_list([10, 20, 30])
-dll.reverse()
-print(dll.visualize())
-# None <- 30 <-> 20 <-> 10 -> None
+dll.next(10)    # 20
+dll.prev(30)    # 20
 
-# Circular Linked List
-cll = CircularLinkedList.from_list(["a", "b", "c"])
-cll.rotate(shift=1)
-print(cll.visualize())
-# c -> a -> b -> (back to head)
+# Built-in help system
+pkstruct.help()                # list all structures
+pkstruct.help(SinglyLinkedList)  # describe a structure + its methods
+pkstruct.help("insert")        # show all insert signatures + docs
+sll.help()                     # instance-level help
 ```
 
 ```python
@@ -50,12 +50,18 @@ bst.insert(15)
 list(bst)          # [5, 10, 15]
 10 in bst          # True
 
+# Node navigation on trees
+bst.root()         # root node
+bst.left(10)       # left child node
+bst.right(10)      # right child node
+bst.parent(5)      # parent node (if maintained by tree)
+
 # AVL Tree (self-balancing)
 avl = AVLTree.from_list([1, 2, 3, 4, 5])
 avl.height()       # 2 (logarithmic, not linear)
 
 # Segment Tree with lazy propagation
-st = SegmentTree([1, 2, 3, 4, 5], func="sum")
+st = SegmentTree([1, 2, 3, 4, 5], operation="sum")
 st.query(1, 3)     # 9 (2 + 3 + 4)
 st.update(2, 10)   # point update
 st.range_update(1, 3, 5)  # range add
@@ -154,6 +160,7 @@ kruskal(g)               # [('A', 'C', 1.0), ('B', 'C', 2.0)]
 | ASCII visualization | ✅ | ✅ | ✅ |
 | Thread-safe (RLock) | ✅ | ✅ | ✅ |
 | `__slots__` nodes | ✅ | ✅ | ✅ |
+| `next()` / `prev()` navigation | ✅ | ✅ | ✅ |
 
 ## API Overview
 
@@ -182,6 +189,8 @@ ll.get(0)                              # by index
 ll[0]                                   # via __getitem__
 ll.index(42)                           # find first occurrence
 ll.count(42)                           # count occurrences
+ll.next(42)                            # element after 42
+ll.prev(42)                            # element before 42
 
 # Mutation
 ll[0] = 99                             # via __setitem__
@@ -268,6 +277,14 @@ list(bst.postorder())    # [5, 15, 10]
 list(bst.level_order())  # [10, 5, 15]
 list(bst.zigzag())       # [10, 15, 5]
 
+# Navigation shortcuts
+bst.root()               # root node
+bst.parent(5)            # parent node (if maintained by tree)
+bst.children(10)         # [node(5), node(15)]
+bst.left(10)             # left child node
+bst.right(10)            # right child node
+bst.sibling(15)          # sibling node (node(5))
+
 # Utilities
 bst.find_lca(5, 15)      # 10 (lowest common ancestor)
 bst.kth_smallest(1)      # 5
@@ -307,7 +324,7 @@ bpt.insert(20)
 bpt.range_query(5, 15)   # efficient via leaf chain
 
 # Segment Tree
-st = SegmentTree([1, 2, 3, 4, 5], func="sum")
+st = SegmentTree([1, 2, 3, 4, 5], operation="sum")
 st.query(0, 2)           # 6
 st.range_update(0, 2, 3) # range add
 st.query(0, 2)           # 15
@@ -395,6 +412,59 @@ except VertexNotFoundError:
     print("Vertex does not exist")
 ```
 
+## Help System
+
+Every public structure is automatically registered.  Access help at the module or instance level:
+
+```python
+import pkstruct
+
+pkstruct.help()                   # list all 20 structures
+pkstruct.help(BinarySearchTree)   # class description + all methods
+pkstruct.help("insert")           # insert from every class, grouped
+
+sll = SinglyLinkedList()
+sll.help()                        # instance-level help for this type
+```
+
+The registry is dynamic — any new structure class is picked up automatically on first call.
+
+## Display Utility
+
+```python
+import pkstruct
+
+pkstruct.display(sll)             # "1 2 3 4 5"  (space-separated)
+pkstruct.display(sll, sep=",")    # "1,2,3,4,5"
+```
+
+## Node Navigation
+
+Linear structures expose positional neighbor lookups:
+
+```python
+sll = SinglyLinkedList.from_list([1, 2, 3])
+sll.next(1)   # 2
+sll.next(3)   # None
+sll.prev(2)   # 1
+```
+
+Trees expose parent/child relationships:
+
+```python
+bst = BinarySearchTree()
+for k in [5, 3, 7, 2, 4]: bst.insert(k)
+
+bst.root()            # node with key=5
+bst.parent(2)         # parent node (key=3, if maintained)
+bst.children(3)       # [node(2), node(4)]
+bst.left(5)           # node(3)
+bst.right(5)          # node(7)
+bst.sibling(4)        # node(2)
+```
+
+Linear structures also provide `head` and `tail` properties; `from_list` and `to_list` for bulk conversion.
+
 ## String Protocol
 
 ```python
@@ -403,7 +473,7 @@ list(sll)          # [1, 2, 3]
 len(sll)           # 3
 bool(sll)          # True (False when empty)
 repr(sll)          # SinglyLinkedList([1, 2, 3])
-str(sll)           # SinglyLinkedList([1, 2, 3])
+str(sll)           # "1 2 3"  (space-separated values)
 42 in sll          # True / False
 sll == other       # value equality
 ```
@@ -412,8 +482,7 @@ sll == other       # value equality
 
 ```bash
 pip install -e ".[dev]"
-pytest src/pkstruct/linear/tests src/pkstruct/trees/tests src/pkstruct/graphs/tests -v
-python run_all_tests.py
+pytest -v
 ```
 
 ## Publishing

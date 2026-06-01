@@ -14,6 +14,8 @@ T = TypeVar("T")
 
 
 class CircularLinkedList(_LinkedListBase[T]):
+    """A circular singly-linked list. The tail node points back to the head."""
+
     __slots__ = ()
 
     def __init__(self) -> None:
@@ -48,7 +50,9 @@ class CircularLinkedList(_LinkedListBase[T]):
         node: CircularNode[T] | None = self._head
         for _ in range(index):
             if node is None:
-                raise RuntimeError("internal invariant violated: unexpected None in linked list chain")
+                raise RuntimeError(
+                    "internal invariant violated: unexpected None in linked list chain"
+                )
             node = node.next
         if node is None:
             raise RuntimeError("internal invariant violated: unexpected None in linked list chain")

@@ -12,6 +12,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar
 
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
 from pkstruct.linear.stacks.stack import Stack
 from pkstruct.shared.threading import StructureLock
@@ -19,7 +21,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class ArrayStack(Stack[T]):
+class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin):
     """
     A thread-safe stack backed by a Python ``list``.
 

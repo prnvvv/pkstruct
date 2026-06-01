@@ -58,6 +58,9 @@ from __future__ import annotations
 from collections.abc import Generator, Iterator
 from typing import Any
 
+from pkstruct._help import HelpMixin
+from pkstruct._str import StrMixin
+from pkstruct._tree_shortcuts import TreeShortcutsMixin
 from pkstruct.shared.threading import StructureLock
 from pkstruct.trees.balancing import rotate
 from pkstruct.trees.node import RBNode
@@ -78,7 +81,7 @@ def _is_nil(node: RBNode | None) -> bool:
     return node is None or node is _NIL
 
 
-class RedBlackTree:
+class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     """Self-balancing Red-Black Tree.
 
     All major operations run in O(log n) time.  The four Red-Black

@@ -14,6 +14,8 @@ import heapq
 from collections.abc import Iterator
 from typing import TypeVar
 
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
 from pkstruct.linear.queues.queue import Queue
 from pkstruct.shared.threading import StructureLock
@@ -21,7 +23,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class PriorityQueue(Queue[T]):
+class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin):
     """
     A thread-safe min-heap priority queue.
 

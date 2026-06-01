@@ -31,10 +31,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from pkstruct._help import HelpMixin
+from pkstruct._str import StrMixin
 from pkstruct.shared.threading import StructureLock
 
 
-class FenwickTree:
+class FenwickTree(HelpMixin, StrMixin):
     """
     A Fenwick Tree (Binary Indexed Tree) for prefix-sum operations.
 

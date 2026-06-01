@@ -9,6 +9,8 @@ T = TypeVar("T")
 
 
 class SinglyLinkedList(_LinkedListBase[T]):
+    """A singly-linked list. Each node points only to the next node."""
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -34,7 +36,9 @@ class SinglyLinkedList(_LinkedListBase[T]):
         cur: SinglyNode[T] | None = self._head
         for _ in range(index):
             if cur is None:
-                raise RuntimeError("internal invariant violated: unexpected None in linked list chain")
+                raise RuntimeError(
+                    "internal invariant violated: unexpected None in linked list chain"
+                )
             cur = cur.next
         if cur is None:
             raise RuntimeError("internal invariant violated: unexpected None in linked list chain")
@@ -117,6 +121,7 @@ class SinglyLinkedList(_LinkedListBase[T]):
             items = self._to_list_unsafe()
         if style != "ascii":
             from pkstruct.linear.exceptions import ValidationError
+
             raise ValidationError(f"Unknown style {style!r}. Only 'ascii' is supported.")
         if not items:
             return "NULL (empty)"

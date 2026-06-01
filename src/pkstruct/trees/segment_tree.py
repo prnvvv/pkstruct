@@ -31,6 +31,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from math import gcd
 
+from pkstruct._help import HelpMixin
+from pkstruct._str import StrMixin
 from pkstruct.shared.threading import StructureLock
 
 # ---------------------------------------------------------------------------
@@ -73,7 +75,7 @@ _LAZY_PROPAGATE: dict[str, Callable[[int, int, int], int]] = {
 SUPPORTED_OPERATIONS = frozenset(_OPERATION.keys())
 
 
-class SegmentTree:
+class SegmentTree(HelpMixin, StrMixin):
     """
     A segment tree supporting configurable range queries and lazy range updates.
 

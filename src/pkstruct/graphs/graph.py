@@ -12,11 +12,13 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+from pkstruct._help import HelpMixin
+from pkstruct._str import StrMixin
 from pkstruct.graphs.exceptions import VertexNotFoundError, EdgeNotFoundError
 from pkstruct.shared.threading import StructureLock
 
 
-class Graph:
+class Graph(HelpMixin, StrMixin):
     """Adjacency-list based graph supporting directed/undirected and weighted modes.
 
     Parameters

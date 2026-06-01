@@ -12,6 +12,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar, cast
 
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
 from pkstruct.linear.linked_lists.singly_linked_list import SinglyLinkedList
 from pkstruct.linear.queues.queue import Queue
@@ -20,7 +22,7 @@ from pkstruct.shared.threading import StructureLock
 T = TypeVar("T")
 
 
-class LinkedQueue(Queue[T]):
+class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin):
     """
     A thread-safe FIFO queue implemented on top of ``SinglyLinkedList``.
 

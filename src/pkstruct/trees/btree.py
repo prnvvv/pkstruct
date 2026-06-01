@@ -43,6 +43,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Any
 
+from pkstruct._help import HelpMixin
+from pkstruct._str import StrMixin
+from pkstruct._tree_shortcuts import TreeShortcutsMixin
 from pkstruct.shared.threading import StructureLock
 from pkstruct.trees.exceptions import (
     DuplicateKeyError,
@@ -53,7 +56,7 @@ from pkstruct.trees.exceptions import (
 from pkstruct.trees.node import BTreeNode
 
 
-class BTree:
+class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     """A balanced multi-way search tree (B-Tree).
 
     Parameters

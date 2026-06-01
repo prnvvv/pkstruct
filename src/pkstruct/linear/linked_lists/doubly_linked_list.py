@@ -11,6 +11,8 @@ T = TypeVar("T")
 
 
 class DoublyLinkedList(_LinkedListBase[T]):
+    """A doubly-linked list. Each node points to both the next and previous node."""
+
     __slots__ = ()
 
     def __init__(self) -> None:
@@ -43,13 +45,17 @@ class DoublyLinkedList(_LinkedListBase[T]):
             node: DoublyNode[T] | None = self._head
             for _ in range(index):
                 if node is None:
-                    raise RuntimeError("internal invariant violated: unexpected None in linked list chain")
+                    raise RuntimeError(
+                        "internal invariant violated: unexpected None in linked list chain"
+                    )
                 node = node.next
         else:
             node = self._tail
             for _ in range(self._size - 1 - index):
                 if node is None:
-                    raise RuntimeError("internal invariant violated: unexpected None in linked list chain")
+                    raise RuntimeError(
+                        "internal invariant violated: unexpected None in linked list chain"
+                    )
                 node = node.prev
         if node is None:
             raise RuntimeError("internal invariant violated: unexpected None in linked list chain")

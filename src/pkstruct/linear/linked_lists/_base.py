@@ -10,6 +10,9 @@ from pkstruct.linear.exceptions import (
     ValidationError,
     ValueNotFoundError,
 )
+from pkstruct._help import HelpMixin
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.shared.debugging import DebugTracer
 from pkstruct.shared.serializers import deserialize_from_json, serialize_to_json
 from pkstruct.shared.threading import StructureLock
@@ -18,7 +21,7 @@ from pkstruct.shared.validators import validate_index, validate_range
 T = TypeVar("T")
 
 
-class _LinkedListBase(Generic[T], ABC):
+class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin):
     __slots__ = ("_head", "_tail", "_size", "_lock", "_tracer")
 
     def __init__(self) -> None:
@@ -100,7 +103,9 @@ class _LinkedListBase(Generic[T], ABC):
         if provided > 1:
             raise ValidationError("Provide at most one of 'position', 'before', or 'after'.")
         with self._lock:
-            self._tracer.record("insert", value=value, position=position, before=before, after=after)
+            self._tracer.record(
+                "insert", value=value, position=position, before=before, after=after
+            )
 
             if before is not None:
                 target = self._find_node(before)
@@ -192,7 +197,9 @@ class _LinkedListBase(Generic[T], ABC):
                 return self._remove_node(node)
 
             if rng is None:
-                raise RuntimeError("internal invariant violated: rng should not be None in the range-delete branch")
+                raise RuntimeError(
+                    "internal invariant violated: rng should not be None in the range-delete branch"
+                )
             start, end = rng
             validate_range(start, end, self._size)
             removed: list[T] = []
@@ -362,7 +369,11 @@ class _LinkedListBase(Generic[T], ABC):
                 effective_shift = length - effective_shift
 
             self._tracer.record(
-                "rotate", shift=actual_shift, start=actual_start, end=actual_end, direction=direction
+                "rotate",
+                shift=actual_shift,
+                start=actual_start,
+                end=actual_end,
+                direction=direction,
             )
 
             if actual_start == 0 and actual_end == self._size - 1:
@@ -463,8 +474,10 @@ class _LinkedListBase(Generic[T], ABC):
                 pred = predicate_or_pivot
             else:
                 pivot = predicate_or_pivot
+
                 def pred(x: T) -> bool:
                     return cast(bool, x < pivot)  # type: ignore[operator]
+
             values = self._to_list_unsafe()
             left = [v for v in values if pred(v)]
             right = [v for v in values if not pred(v)]

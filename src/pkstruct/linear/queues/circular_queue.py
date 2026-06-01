@@ -13,6 +13,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TypeVar
 
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import EmptyStructureError
 from pkstruct.linear.queues.queue import Queue
 from pkstruct.shared.threading import StructureLock
@@ -28,7 +30,7 @@ class QueueFullError(IndexError):
         super().__init__(f"Queue is at capacity ({capacity}).")
 
 
-class CircularQueue(Queue[T]):
+class CircularQueue(Queue[T], StrMixin, LinearShortcutsMixin):
     """
     A thread-safe, fixed-capacity FIFO queue using a ring buffer.
 
@@ -67,9 +69,7 @@ class CircularQueue(Queue[T]):
         self._lock: StructureLock = StructureLock()
         if items is not None:
             if len(items) > capacity:
-                raise ValueError(
-                    f"Initial items ({len(items)}) exceeds capacity ({capacity})."
-                )
+                raise ValueError(f"Initial items ({len(items)}) exceeds capacity ({capacity}).")
             for item in items:
                 self._enqueue_unsafe(item)
 

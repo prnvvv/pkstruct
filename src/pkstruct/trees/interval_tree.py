@@ -36,6 +36,9 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
+from pkstruct._help import HelpMixin
+from pkstruct._str import StrMixin
+from pkstruct._tree_shortcuts import TreeShortcutsMixin
 from pkstruct.shared.threading import StructureLock
 
 Interval = tuple[int, int]
@@ -225,7 +228,7 @@ def _inorder(node: _INode | None, out: list[Interval]) -> None:
 # ---------------------------------------------------------------------------
 
 
-class IntervalTree:
+class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     """
     An augmented AVL interval tree supporting efficient overlap queries.
 

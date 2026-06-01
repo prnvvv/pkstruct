@@ -12,6 +12,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Literal, TypeVar, cast
 
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.linear.deques.deque import Deque
 from pkstruct.linear.exceptions import EmptyStructureError
 from pkstruct.linear.linked_lists.doubly_linked_list import DoublyLinkedList
@@ -22,7 +24,7 @@ T = TypeVar("T")
 _Side = Literal["left", "right"]
 
 
-class LinkedDeque(Deque[T]):
+class LinkedDeque(Deque[T], StrMixin, LinearShortcutsMixin):
     """
     A thread-safe double-ended queue implemented on top of ``DoublyLinkedList``.
 

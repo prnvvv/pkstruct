@@ -28,6 +28,8 @@ Example
 [5, 10, 15]
 """
 
+from pkstruct._display import display as _display_fn
+from pkstruct._help import _register, module_help
 from pkstruct.graphs import (
     Graph,
     DirectedGraph,
@@ -97,7 +99,65 @@ from pkstruct.trees import (
     SerializationError as TreeSerializationError,
 )
 
+_STRUCTURES = [
+    SinglyLinkedList,
+    DoublyLinkedList,
+    CircularLinkedList,
+    ArrayStack,
+    LinkedStack,
+    LinkedQueue,
+    CircularQueue,
+    PriorityQueue,
+    LinkedDeque,
+    BinarySearchTree,
+    AVLTree,
+    RedBlackTree,
+    BTree,
+    BPlusTree,
+    SegmentTree,
+    FenwickTree,
+    IntervalTree,
+    Graph,
+    DirectedGraph,
+    WeightedGraph,
+]
+
+for _cls in _STRUCTURES:
+    _register(_cls)
+
+
+def help(target: object = None) -> str:  # noqa: A001
+    """Display help for pkstruct structures and methods.
+
+    Usage:
+        pkstruct.help()            -> list all structures
+        pkstruct.help(bst)         -> describe a structure
+        pkstruct.help("insert")    -> describe a method
+
+    Parameters
+    ----------
+    target:
+        A structure class, a method name (str), or None to list all.
+    """
+    return module_help(target)
+
+
+def display(ds: object, sep: str = " ") -> None:
+    """Print the elements of a data structure separated by *sep*.
+
+    Parameters
+    ----------
+    ds:
+        Any pkstruct data structure.
+    sep:
+        Separator between elements (default: space).
+    """
+    _display_fn(ds, sep)
+
+
 __all__ = [
+    "help",
+    "display",
     # Graphs
     "Graph",
     "DirectedGraph",
