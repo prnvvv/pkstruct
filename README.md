@@ -258,6 +258,43 @@ d.pop()         # 4
 d.popleft()     # 0
 ```
 
+### Linear — Utilities
+
+```python
+from pkstruct.linear.utils import merge_sorted_lists, detect_intersection, list_equal, to_array
+from pkstruct.linear.utils import ForwardIterator, BackwardIterator, CircularIterator
+from pkstruct.linear.utils import memory_usage, validate_integrity
+from pkstruct.linear.utils import benchmark_operations, compare_with_builtins, run_full_benchmark
+
+# Merge multiple sorted linked lists
+sll1 = SinglyLinkedList.from_list([1, 3, 5])
+sll2 = SinglyLinkedList.from_list([2, 4, 6])
+merged = merge_sorted_lists(sll1, sll2)   # [1, 2, 3, 4, 5, 6]
+
+# Detect if two lists share a node (by identity)
+node_data = detect_intersection(sll1, sll2)
+
+# Compare list equality
+list_equal(sll1, sll2)                     # False
+
+# Convert to plain list
+to_array(sll1)                             # [1, 3, 5]
+
+# Specialized iterators
+list(ForwardIterator(sll))                 # forward over SLL/DLL/CLL
+list(BackwardIterator(dll))                # backward over DLL only
+circ = CircularIterator(cll, max_cycles=2) # bounded circular iteration
+
+# Diagnostics
+memory_usage(sll)                          # estimated bytes
+validate_integrity(sll)                    # {"valid": True, "errors": [], ...}
+
+# Benchmarks
+benchmark_operations(SinglyLinkedList)     # time insert/delete/get/search
+compare_with_builtins()                    # pkstruct vs list vs deque
+run_full_benchmark()                       # full suite
+```
+
 ### Trees
 
 ```python
@@ -343,6 +380,59 @@ it.insert(5, 10, "A")
 it.insert(15, 20, "B")
 it.overlap(8, 12)        # [(5, 10, "A")]
 it.overlap_all(8, 12)    # all overlapping intervals
+```
+
+### Trees — Utilities
+
+```python
+from pkstruct.trees.traversal import traverse, inorder, preorder, postorder
+from pkstruct.trees.traversal import levelorder, reverse_inorder, zigzag
+from pkstruct.trees.traversal import boundary, vertical, iter_levels
+from pkstruct.trees.balancing import rotate, rebalance, update_metadata
+from pkstruct.trees.balancing import get_balance_factor, validate_balance
+from pkstruct.trees.tree_helpers import (calculate_height, calculate_size,
+    count_nodes, count_leaves, is_leaf, is_internal, clone_subtree,
+    validate_bst_order, path_to_node, level_of_node, max_width)
+
+# Traversal functions (work on any binary tree root)
+bst = BinarySearchTree()
+for k in [10, 5, 15, 3, 7, 12, 20]: bst.insert(k)
+root = bst.root()
+
+list(inorder(root))              # [(3,None), (5,None), ...]
+list(preorder(root))             # [(10,None), (5,None), ...]
+list(postorder(root))            # [(3,None), (7,None), ...]
+list(levelorder(root))           # BFS order
+list(reverse_inorder(root))      # descending order
+list(zigzag(root))               # alternating direction
+list(boundary(root))             # anti-clockwise boundary
+list(vertical(root))             # grouped by horizontal distance
+
+# Level-wise iteration
+for level_nodes in iter_levels(root):
+    print(level_nodes)           # one list per level
+
+# Unified dispatcher
+traverse(root, order="zigzag", yield_nodes=True)
+
+# Balancing utilities
+rotate(node, direction="left")       # single rotation
+rebalance(node, strategy="avl")      # restore AVL balance
+update_metadata(node)                # refresh cached height
+get_balance_factor(node)             # left - right height
+validate_balance(root)               # check entire tree
+
+# Tree helpers
+calculate_height(root)               # height of tree
+calculate_size(root)                 # total node count
+count_leaves(root)                   # leaf node count
+is_leaf(node)                        # True if no children
+is_internal(node)                    # True if has children
+clone_subtree(root, lambda n: TreeNode(n.key, n.value))
+validate_bst_order(root)             # strict BST invariant
+path_to_node(root, lambda n: n.key, 7)   # [10, 5, 7]
+level_of_node(root, lambda n: n.key, 12) # 2
+max_width(root)                      # max nodes on any level
 ```
 
 ### Graphs
