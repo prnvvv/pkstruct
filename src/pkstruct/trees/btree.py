@@ -518,7 +518,8 @@ class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._size > 0
+        with self._lock:
+            return self._size > 0
 
     def __len__(self) -> int:
         """Return the number of keys in the tree."""
@@ -533,6 +534,12 @@ class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             keys = list(self._inorder(self._root))
         return iter(keys)
+
+    def __reversed__(self) -> Iterator[Any]:
+        """Iterate over keys in descending order."""
+        with self._lock:
+            keys = list(self._inorder(self._root))
+        return iter(reversed(keys))
 
     def _inorder(self, node: BTreeNode | None) -> Iterator[Any]:
         if node is None:
@@ -555,7 +562,10 @@ class BTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         if not isinstance(other, BTree):
             return NotImplemented
         with self._lock:
-            return list(self) == list(other)
+            my_keys = list(self)
+        with other._lock:
+            other_keys = list(other)
+        return my_keys == other_keys
 
     def debug(self) -> dict[str, object]:
         """Return internal state for debugging purposes."""

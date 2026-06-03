@@ -301,11 +301,19 @@ class Graph(HelpMixin, StrMixin):
     def copy(self) -> Graph:
         """Return a deep copy of the graph."""
         with self._lock:
-            new_graph = Graph(directed=self._directed)
+            cls = type(self)
+            if cls is Graph:
+                new_graph = cls(directed=self._directed)
+            else:
+                new_graph = cls()
             for v in self._adj:
                 new_graph._adj[v] = dict(self._adj[v])
             new_graph._edge_count = self._edge_count
             return new_graph
+
+    def size(self) -> int:
+        """Return the number of vertices in the graph."""
+        return self.order()
 
     def visualize(self, show_weights: bool = True) -> str:
         """Return an ASCII representation of the graph.
@@ -348,10 +356,14 @@ class Graph(HelpMixin, StrMixin):
         if not isinstance(other, Graph):
             return NotImplemented
         with self._lock:
+            my_directed = self._directed
+            my_edge_count = self._edge_count
+            my_adj = {v: dict(edges) for v, edges in self._adj.items()}
+        with other._lock:
             return (
-                self._directed == other._directed
-                and self._edge_count == other._edge_count
-                and self._adj == other._adj
+                my_directed == other._directed
+                and my_edge_count == other._edge_count
+                and my_adj == other._adj
             )
 
     def debug(self) -> dict[str, object]:

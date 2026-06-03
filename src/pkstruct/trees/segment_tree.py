@@ -34,6 +34,7 @@ from math import gcd
 from pkstruct._help import HelpMixin
 from pkstruct._str import StrMixin
 from pkstruct.shared.threading import StructureLock
+from pkstruct.trees.exceptions import IndexOutOfBoundsError
 
 # ---------------------------------------------------------------------------
 # Supported operations
@@ -416,20 +417,26 @@ class SegmentTree(HelpMixin, StrMixin):
     @property
     def size(self) -> int:
         """Number of elements in the segment tree."""
-        return self._n
+        with self._lock:
+            return self._n
 
     def __contains__(self, item: object) -> bool:
-        """Return True if item is in the tree."""
+        """Return True if item is in the tree.  Complexity: O(n log n)."""
         with self._lock:
-            return item in self.to_list()
+            for i in range(self._n):
+                if self.query(i, i) == item:
+                    return True
+            return False
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._n > 0
+        with self._lock:
+            return self._n > 0
 
     def __len__(self) -> int:
         """Return number of elements. Complexity: O(1)."""
-        return self._n
+        with self._lock:
+            return self._n
 
     def __iter__(self) -> Iterator[int]:
         """Iterate over elements in 0-based order."""
@@ -445,11 +452,11 @@ class SegmentTree(HelpMixin, StrMixin):
         if not isinstance(other, SegmentTree):
             return NotImplemented
         with self._lock:
-            return (
-                self._n == other._n
-                and self._operation_name == other._operation_name
-                and self._tree == other._tree
-            )
+            my_n = self._n
+            my_op = self._operation_name
+            my_tree = list(self._tree)
+        with other._lock:
+            return my_n == other._n and my_op == other._operation_name and my_tree == other._tree
 
     def debug(self) -> dict[str, object]:
         """Return internal state for debugging purposes."""
@@ -468,7 +475,7 @@ class SegmentTree(HelpMixin, StrMixin):
 
     def _check_index(self, index: int) -> None:
         if not (0 <= index < self._n):
-            raise IndexError(f"Index {index} out of range for tree of size {self._n}.")
+            raise IndexOutOfBoundsError(index, self._n)
 
     def _check_range(self, left: int, right: int) -> None:
         if left > right:

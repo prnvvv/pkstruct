@@ -17,6 +17,7 @@ class TreeShortcutsMixin:
                 return f"[{', '.join(str(v) for v in items)}]"
             return " -> ".join(str(v) for v in items)
 
+    @property
     def root(self) -> Any:
         """Return the root node of the tree, or *None* if empty."""
         return self._root

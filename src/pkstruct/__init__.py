@@ -78,7 +78,6 @@ from pkstruct.linear import (
     PkstructError,
     PriorityQueue,
     QueueFullError,
-    SerializationError,
     SinglyLinkedList,
     ValidationError,
     ValueNotFoundError,
@@ -99,6 +98,7 @@ from pkstruct.trees import (
     KeyNotFoundError,
     RedBlackTree,
     SegmentTree,
+    SerializationError,
     TreeBalanceError,
     TreeError,
 )

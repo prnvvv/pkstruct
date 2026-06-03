@@ -25,6 +25,7 @@ Reusable helpers:
 from __future__ import annotations
 
 import math
+import sys
 from collections.abc import Callable
 from typing import Any, Protocol, TypeVar
 
@@ -50,7 +51,7 @@ N = TypeVar("N")
 # Height / depth
 # ---------------------------------------------------------------------------
 
-def calculate_height(node: Any | None) -> int:
+def calculate_height(node: Any | None, _depth: int = 0) -> int:
     """
     Compute the height of the subtree rooted at node.
 
@@ -71,9 +72,14 @@ def calculate_height(node: Any | None) -> int:
         >>> calculate_height(leaf_node)
         1
     """
+    if _depth > sys.getrecursionlimit() - 100:
+        raise RuntimeError(
+            "Tree is too deep (possible degenerate tree). "
+            "Try sys.setrecursionlimit() for deeper trees."
+        )
     if node is None:
         return 0
-    return 1 + max(calculate_height(node.left), calculate_height(node.right))
+    return 1 + max(calculate_height(node.left, _depth + 1), calculate_height(node.right, _depth + 1))
 
 
 def tree_depth(node: Any | None) -> int:
@@ -91,7 +97,7 @@ def tree_depth(node: Any | None) -> int:
 # Size / count
 # ---------------------------------------------------------------------------
 
-def calculate_size(node: Any | None) -> int:
+def calculate_size(node: Any | None, _depth: int = 0) -> int:
     """
     Count all nodes in the subtree rooted at node.
 
@@ -103,9 +109,14 @@ def calculate_size(node: Any | None) -> int:
     Returns:
         Total number of nodes in the subtree.
     """
+    if _depth > sys.getrecursionlimit() - 100:
+        raise RuntimeError(
+            "Tree is too deep (possible degenerate tree). "
+            "Try sys.setrecursionlimit() for deeper trees."
+        )
     if node is None:
         return 0
-    return 1 + calculate_size(node.left) + calculate_size(node.right)
+    return 1 + calculate_size(node.left, _depth + 1) + calculate_size(node.right, _depth + 1)
 
 
 def count_nodes(node: Any | None) -> int:
@@ -119,7 +130,7 @@ def count_nodes(node: Any | None) -> int:
     return calculate_size(node)
 
 
-def count_leaves(node: Any | None) -> int:
+def count_leaves(node: Any | None, _depth: int = 0) -> int:
     """
     Count leaf nodes (nodes with no children) in the subtree.
 
@@ -131,11 +142,16 @@ def count_leaves(node: Any | None) -> int:
     Returns:
         Number of leaf nodes.
     """
+    if _depth > sys.getrecursionlimit() - 100:
+        raise RuntimeError(
+            "Tree is too deep (possible degenerate tree). "
+            "Try sys.setrecursionlimit() for deeper trees."
+        )
     if node is None:
         return 0
     if node.left is None and node.right is None:
         return 1
-    return count_leaves(node.left) + count_leaves(node.right)
+    return count_leaves(node.left, _depth + 1) + count_leaves(node.right, _depth + 1)
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +202,7 @@ def is_internal(node: Any) -> bool:
 def clone_subtree(
     node: N | None,
     node_factory: Callable[[N], N],
+    _depth: int = 0,
 ) -> N | None:
     """
     Deep-clone a subtree using a caller-supplied node factory.
@@ -213,11 +230,16 @@ def clone_subtree(
         ...     return clone
         >>> new_root = clone_subtree(tree.root, bst_factory)
     """
+    if _depth > sys.getrecursionlimit() - 100:
+        raise RuntimeError(
+            "Tree is too deep (possible degenerate tree). "
+            "Try sys.setrecursionlimit() for deeper trees."
+        )
     if node is None:
         return None
     new_node: N = node_factory(node)
-    new_node.left = clone_subtree(node.left, node_factory)   # type: ignore[attr-defined]
-    new_node.right = clone_subtree(node.right, node_factory)  # type: ignore[attr-defined]
+    new_node.left = clone_subtree(node.left, node_factory, _depth + 1)   # type: ignore[attr-defined]
+    new_node.right = clone_subtree(node.right, node_factory, _depth + 1)  # type: ignore[attr-defined]
     return new_node
 
 
@@ -230,6 +252,7 @@ def validate_bst_order(
     key_fn: Callable[[Any], Any] = lambda n: n.key,
     min_val: Any = -math.inf,
     max_val: Any = math.inf,
+    _depth: int = 0,
 ) -> bool:
     """
     Recursively verify BST ordering invariant for a binary subtree.
@@ -254,6 +277,11 @@ def validate_bst_order(
     Raises:
         ValueError: If an ordering violation is detected.
     """
+    if _depth > sys.getrecursionlimit() - 100:
+        raise RuntimeError(
+            "Tree is too deep (possible degenerate tree). "
+            "Try sys.setrecursionlimit() for deeper trees."
+        )
     if node is None:
         return True
     key = key_fn(node)
@@ -265,8 +293,8 @@ def validate_bst_order(
         raise ValueError(
             f"BST order violation: key {key!r} is not < upper bound {max_val!r}."
         )
-    validate_bst_order(node.left, key_fn, min_val, key)
-    validate_bst_order(node.right, key_fn, key, max_val)
+    validate_bst_order(node.left, key_fn, min_val, key, _depth + 1)
+    validate_bst_order(node.right, key_fn, key, max_val, _depth + 1)
     return True
 
 

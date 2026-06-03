@@ -51,7 +51,7 @@ list(bst)          # [5, 10, 15]
 10 in bst          # True
 
 # Node navigation on trees
-bst.root()         # root node
+bst.root           # root node
 bst.left(10)       # left child node
 bst.right(10)      # right child node
 bst.parent(5)      # parent node (if maintained by tree)
@@ -315,7 +315,7 @@ list(bst.level_order())  # [10, 5, 15]
 list(bst.zigzag())       # [10, 15, 5]
 
 # Navigation shortcuts
-bst.root()               # root node
+bst.root                 # root node
 bst.parent(5)            # parent node (if maintained by tree)
 bst.children(10)         # [node(5), node(15)]
 bst.left(10)             # left child node
@@ -397,7 +397,7 @@ from pkstruct.trees.tree_helpers import (calculate_height, calculate_size,
 # Traversal functions (work on any binary tree root)
 bst = BinarySearchTree()
 for k in [10, 5, 15, 3, 7, 12, 20]: bst.insert(k)
-root = bst.root()
+root = bst.root
 
 list(inorder(root))              # [(3,None), (5,None), ...]
 list(preorder(root))             # [(10,None), (5,None), ...]
@@ -545,7 +545,7 @@ Trees expose parent/child relationships:
 bst = BinarySearchTree()
 for k in [5, 3, 7, 2, 4]: bst.insert(k)
 
-bst.root()            # node with key=5
+bst.root              # node with key=5
 bst.parent(2)         # parent node (key=3, if maintained)
 bst.children(3)       # [node(2), node(4)]
 bst.left(5)           # node(3)

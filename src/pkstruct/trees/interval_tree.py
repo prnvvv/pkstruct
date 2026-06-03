@@ -490,7 +490,8 @@ class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     @property
     def size(self) -> int:
         """Number of intervals stored in the tree."""
-        return self._size
+        with self._lock:
+            return self._size
 
     def height(self) -> int:
         """
@@ -537,7 +538,8 @@ class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._size > 0
+        with self._lock:
+            return self._size > 0
 
     def __len__(self) -> int:
         """Return number of intervals. Complexity: O(1)."""
@@ -589,7 +591,10 @@ class IntervalTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         if not isinstance(other, IntervalTree):
             return NotImplemented
         with self._lock:
-            return list(self) == list(other)
+            my_intervals = list(self)
+        with other._lock:
+            other_intervals = list(other)
+        return my_intervals == other_intervals
 
     def debug(self) -> dict[str, object]:
         """Return internal state for debugging purposes."""

@@ -448,7 +448,8 @@ class BPlusTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._size > 0
+        with self._lock:
+            return self._size > 0
 
     def __len__(self) -> int:
         return self.size()
@@ -461,6 +462,11 @@ class BPlusTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             keys = list(self.leaf_traversal())
         return iter(keys)
 
+    def __reversed__(self) -> Iterator[Any]:
+        with self._lock:
+            keys = list(self.leaf_traversal())
+        return iter(reversed(keys))
+
     def __repr__(self) -> str:  # pragma: no cover
         with self._lock:
             keys = list(self.leaf_traversal())
@@ -470,7 +476,10 @@ class BPlusTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         if not isinstance(other, BPlusTree):
             return NotImplemented
         with self._lock:
-            return list(self) == list(other)
+            my_keys = list(self)
+        with other._lock:
+            other_keys = list(other)
+        return my_keys == other_keys
 
     def debug(self) -> dict[str, object]:
         with self._lock:

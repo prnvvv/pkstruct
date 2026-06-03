@@ -203,9 +203,14 @@ class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin
             start, end = rng
             validate_range(start, end, self._size)
             removed: list[T] = []
+            # Single traversal to collect nodes, then remove
+            node = self._node_at(start)
+            nodes_to_remove: list[Any] = []
             for _ in range(end - start + 1):
-                node = self._node_at(start)
-                removed.append(self._remove_node(node))
+                nodes_to_remove.append(node)
+                node = node.next  # type: ignore[union-attr]
+            for n in nodes_to_remove:
+                removed.append(self._remove_node(n))
             return removed
 
     def clear(self) -> None:

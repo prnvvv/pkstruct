@@ -248,6 +248,12 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     # Metrics
     # ------------------------------------------------------------------
 
+    @property
+    def root(self) -> TreeNode | None:
+        """Return the root node of the tree (or None if empty)."""
+        with self._lock:
+            return self._root
+
     def size(self) -> int:
         """Return the number of nodes currently in the tree."""
         with self._lock:
@@ -927,7 +933,8 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._size > 0
+        with self._lock:
+            return self._size > 0
 
     def __len__(self) -> int:
         """Return the number of nodes in the tree."""
@@ -959,7 +966,10 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         if not isinstance(other, BinarySearchTree):
             return NotImplemented
         with self._lock:
-            return list(self) == list(other)
+            my_keys = list(self)
+        with other._lock:
+            other_keys = list(other)
+        return my_keys == other_keys
 
     def __repr__(self) -> str:  # pragma: no cover
         with self._lock:

@@ -34,6 +34,7 @@ from collections.abc import Iterator, Sequence
 from pkstruct._help import HelpMixin
 from pkstruct._str import StrMixin
 from pkstruct.shared.threading import StructureLock
+from pkstruct.trees.exceptions import IndexOutOfBoundsError
 
 
 class FenwickTree(HelpMixin, StrMixin):
@@ -286,7 +287,8 @@ class FenwickTree(HelpMixin, StrMixin):
     @property
     def size(self) -> int:
         """Number of elements tracked by this tree."""
-        return self._n
+        with self._lock:
+            return self._n
 
     # ------------------------------------------------------------------
     # Validation
@@ -336,17 +338,22 @@ class FenwickTree(HelpMixin, StrMixin):
     # ------------------------------------------------------------------
 
     def __contains__(self, item: object) -> bool:
-        """Return True if item is in the tree."""
+        """Return True if item is in the tree.  Complexity: O(n log n)."""
         with self._lock:
-            return item in self.to_list()
+            for i in range(1, self._n + 1):
+                if self.range_query(i, i) == item:
+                    return True
+            return False
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._n > 0
+        with self._lock:
+            return self._n > 0
 
     def __len__(self) -> int:
         """Return number of elements. Complexity: O(1)."""
-        return self._n
+        with self._lock:
+            return self._n
 
     def __iter__(self) -> Iterator[int]:
         """Iterate over elements in 1-based order."""
@@ -362,7 +369,10 @@ class FenwickTree(HelpMixin, StrMixin):
         if not isinstance(other, FenwickTree):
             return NotImplemented
         with self._lock:
-            return self._n == other._n and self._tree == other._tree
+            my_n = self._n
+            my_tree = list(self._tree)
+        with other._lock:
+            return my_n == other._n and my_tree == other._tree
 
     def debug(self) -> dict[str, object]:
         """Return internal state for debugging purposes."""
@@ -379,6 +389,6 @@ class FenwickTree(HelpMixin, StrMixin):
 
     def _check_index(self, index: int) -> None:
         if not (1 <= index <= self._n):
-            raise IndexError(
-                f"Index {index} out of range for tree of size {self._n} (1-based: 1..{self._n})."
+            raise IndexOutOfBoundsError(
+                index, self._n
             )

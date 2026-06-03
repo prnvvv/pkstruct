@@ -87,7 +87,7 @@ class InvalidIntervalError(TreeError):
         self.hi = hi
 
 
-class IndexOutOfBoundsError(TreeError):
+class IndexOutOfBoundsError(TreeError, IndexError):
     """Raised when a k-th order statistic index is out of range."""
 
     def __init__(self, index: int, size: int) -> None:

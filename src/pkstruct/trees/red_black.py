@@ -714,7 +714,8 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""
-        return self._size > 0
+        with self._lock:
+            return self._size > 0
 
     def __len__(self) -> int:
         """Return the number of nodes in the tree."""
@@ -741,7 +742,10 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         if not isinstance(other, RedBlackTree):
             return NotImplemented
         with self._lock:
-            return list(self) == list(other)
+            my_keys = list(self)
+        with other._lock:
+            other_keys = list(other)
+        return my_keys == other_keys
 
     def debug(self) -> dict[str, object]:
         """Return internal state for debugging purposes."""
