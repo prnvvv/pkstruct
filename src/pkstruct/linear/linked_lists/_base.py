@@ -20,6 +20,8 @@ from pkstruct.shared.validators import validate_index, validate_range
 
 T = TypeVar("T")
 
+_SENTINEL = object()
+
 
 class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin):
     __slots__ = ("_head", "_tail", "_size", "_lock", "_tracer")
@@ -280,12 +282,12 @@ class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin
 
     def replace(
         self,
-        new_value: T,
+        new_value: T = _SENTINEL,  # type: ignore[assignment]
         old_value: T | None = None,
         position: int | None = None,
         replace_all: bool = False,
     ) -> int:
-        if new_value is None:
+        if new_value is _SENTINEL:
             raise ValidationError("'new_value' is required.")
         with self._lock:
             self._tracer.record(
@@ -675,6 +677,6 @@ class _LinkedListBase(Generic[T], ABC, StrMixin, LinearShortcutsMixin, HelpMixin
         self.replace(new_value=value, position=index)
 
     def __eq__(self, other: object) -> bool:
-        if type(other) is not type(self):
+        if not isinstance(other, _LinkedListBase):
             return NotImplemented
         return self.to_list() == other.to_list()

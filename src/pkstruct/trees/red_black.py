@@ -50,7 +50,7 @@ Dunder
 Complexity
 ----------
 All major operations are O(log n) due to the RB height bound
-  h ≤ 2 · log2(n + 1).
+  h <= 2 * log2(n + 1).
 """
 
 from __future__ import annotations
@@ -67,18 +67,6 @@ from pkstruct.trees.node import RBNode
 
 RED: int = 0
 BLACK: int = 1
-
-# Sentinel NIL node – shared across the entire module, never modified.
-_NIL: RBNode = RBNode(key=None, value=None)
-_NIL.color = BLACK
-_NIL.left = None  # type: ignore[assignment]
-_NIL.right = None  # type: ignore[assignment]
-_NIL.parent = None  # type: ignore[assignment]
-
-
-def _is_nil(node: RBNode | None) -> bool:
-    """Return *True* if *node* is the sentinel NIL or Python *None*."""
-    return node is None or node is _NIL
 
 
 class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
@@ -99,10 +87,18 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     # ------------------------------------------------------------------
 
     def __init__(self, allow_duplicates: bool = False) -> None:
-        self._root: RBNode = _NIL
+        self._NIL: RBNode = RBNode(key=None, value=None)
+        self._NIL.color = BLACK
+        self._NIL.left = None
+        self._NIL.right = None
+        self._NIL.parent = None
+        self._root: RBNode = self._NIL
         self._size: int = 0
         self._allow_duplicates = allow_duplicates
         self._lock: StructureLock = StructureLock()
+
+    def _is_nil(self, node: RBNode | None) -> bool:
+        return node is None or node is self._NIL
 
     @classmethod
     def from_list(cls, items: list[Any], allow_duplicates: bool = False) -> RedBlackTree:
@@ -145,7 +141,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             existing = self._find(self._root, key)
-            if not _is_nil(existing):
+            if not self._is_nil(existing):
                 if self._allow_duplicates:
                     raise ValueError(f"Duplicate key: {key!r}")
                 existing.value = value
@@ -153,19 +149,18 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
             new_node = RBNode(key, value)
             new_node.color = RED
-            new_node.left = _NIL
-            new_node.right = _NIL
-            new_node.parent = _NIL
+            new_node.left = self._NIL
+            new_node.right = self._NIL
+            new_node.parent = self._NIL
 
-            # Standard BST insert
-            parent: RBNode = _NIL
+            parent: RBNode = self._NIL
             current: RBNode = self._root
-            while not _is_nil(current):
+            while not self._is_nil(current):
                 parent = current
                 current = current.left if key < current.key else current.right
 
             new_node.parent = parent
-            if _is_nil(parent):
+            if self._is_nil(parent):
                 self._root = new_node
             elif key < parent.key:
                 parent.left = new_node
@@ -179,70 +174,64 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """Restore Red-Black properties after a standard BST insert.
 
         Handles the three canonical cases:
-          - Uncle is RED → recolor.
-          - Uncle is BLACK, triangle → rotate to line case.
-          - Uncle is BLACK, line → rotate and recolor.
+          - Uncle is RED -> recolor.
+          - Uncle is BLACK, triangle -> rotate to line case.
+          - Uncle is BLACK, line -> rotate and recolor.
 
         Parameters
         ----------
         node:
             The newly inserted RED node.
         """
-        while not _is_nil(node.parent) and node.parent.color == RED:
+        while not self._is_nil(node.parent) and node.parent.color == RED:
             parent = node.parent
             grandparent = parent.parent
-            if _is_nil(grandparent):
+            if self._is_nil(grandparent):
                 break
 
             if parent is grandparent.left:
                 uncle = grandparent.right
-                if not _is_nil(uncle) and uncle.color == RED:
-                    # Case 1: recolor
+                if not self._is_nil(uncle) and uncle.color == RED:
                     parent.color = BLACK
                     uncle.color = BLACK
                     grandparent.color = RED
                     node = grandparent
                 else:
                     if node is parent.right:
-                        # Case 2: triangle → convert to line
                         node = parent
                         new_root = rotate(node, "left", self._root)
-                        if _is_nil(new_root.parent):
+                        if self._is_nil(new_root.parent):
                             self._root = new_root
                         parent = node.parent
-                        grandparent = parent.parent if not _is_nil(parent) else _NIL
-                    # Case 3: line
-                    if not _is_nil(parent):
+                        grandparent = parent.parent if not self._is_nil(parent) else self._NIL
+                    if not self._is_nil(parent):
                         parent.color = BLACK
-                    if not _is_nil(grandparent):
+                    if not self._is_nil(grandparent):
                         grandparent.color = RED
                         new_root = rotate(grandparent, "right", self._root)
-                        if _is_nil(new_root.parent):
+                        if self._is_nil(new_root.parent):
                             self._root = new_root
             else:
                 uncle = grandparent.left
-                if not _is_nil(uncle) and uncle.color == RED:
-                    # Case 1 (mirror)
+                if not self._is_nil(uncle) and uncle.color == RED:
                     parent.color = BLACK
                     uncle.color = BLACK
                     grandparent.color = RED
                     node = grandparent
                 else:
                     if node is parent.left:
-                        # Case 2 (mirror)
                         node = parent
                         new_root = rotate(node, "right", self._root)
-                        if _is_nil(new_root.parent):
+                        if self._is_nil(new_root.parent):
                             self._root = new_root
                         parent = node.parent
-                        grandparent = parent.parent if not _is_nil(parent) else _NIL
-                    # Case 3 (mirror)
-                    if not _is_nil(parent):
+                        grandparent = parent.parent if not self._is_nil(parent) else self._NIL
+                    if not self._is_nil(parent):
                         parent.color = BLACK
-                    if not _is_nil(grandparent):
+                    if not self._is_nil(grandparent):
                         grandparent.color = RED
                         new_root = rotate(grandparent, "left", self._root)
-                        if _is_nil(new_root.parent):
+                        if self._is_nil(new_root.parent):
                             self._root = new_root
 
         self._root.color = BLACK
@@ -262,7 +251,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             target = self._find(self._root, key)
-            if _is_nil(target):
+            if self._is_nil(target):
                 raise KeyError(f"Key not found: {key!r}")
             self._rb_delete(target)
             self._size -= 1
@@ -273,14 +262,13 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         y_original_color = y.color
         x: RBNode
 
-        if _is_nil(z.left):
+        if self._is_nil(z.left):
             x = z.right
             self._transplant(z, z.right)
-        elif _is_nil(z.right):
+        elif self._is_nil(z.right):
             x = z.left
             self._transplant(z, z.left)
         else:
-            # y = minimum of z.right
             y = self._min_node(z.right)
             y_original_color = y.color
             x = y.right
@@ -300,7 +288,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
 
     def _transplant(self, u: RBNode, v: RBNode) -> None:
         """Replace subtree rooted at *u* with subtree rooted at *v*."""
-        if _is_nil(u.parent):
+        if self._is_nil(u.parent):
             self._root = v
         elif u is u.parent.left:
             u.parent.left = v
@@ -320,88 +308,80 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         while x is not self._root and x.color == BLACK:
             parent = x.parent
-            if _is_nil(parent):
+            if self._is_nil(parent):
                 break
             if x is parent.left:
                 w = parent.right
-                if not _is_nil(w) and w.color == RED:
-                    # Case 1
+                if not self._is_nil(w) and w.color == RED:
                     w.color = BLACK
                     parent.color = RED
                     new_root = rotate(parent, "left", self._root)
-                    if _is_nil(new_root.parent):
+                    if self._is_nil(new_root.parent):
                         self._root = new_root
                     w = x.parent.right
 
-                w_left_black = _is_nil(w.left) or w.left.color == BLACK
-                w_right_black = _is_nil(w.right) or w.right.color == BLACK
+                w_left_black = self._is_nil(w.left) or w.left.color == BLACK
+                w_right_black = self._is_nil(w.right) or w.right.color == BLACK
 
                 if w_left_black and w_right_black:
-                    # Case 2
-                    if not _is_nil(w):
+                    if not self._is_nil(w):
                         w.color = RED
                     x = x.parent
                 else:
                     if w_right_black:
-                        # Case 3
-                        if not _is_nil(w.left):
+                        if not self._is_nil(w.left):
                             w.left.color = BLACK
-                        if not _is_nil(w):
+                        if not self._is_nil(w):
                             w.color = RED
                         new_root = rotate(w, "right", self._root)
-                        if _is_nil(new_root.parent):
+                        if self._is_nil(new_root.parent):
                             self._root = new_root
                         w = x.parent.right
 
-                    # Case 4
-                    if not _is_nil(w):
+                    if not self._is_nil(w):
                         w.color = x.parent.color
                     x.parent.color = BLACK
-                    if not _is_nil(w) and not _is_nil(w.right):
+                    if not self._is_nil(w) and not self._is_nil(w.right):
                         w.right.color = BLACK
                     new_root = rotate(x.parent, "left", self._root)
-                    if _is_nil(new_root.parent):
+                    if self._is_nil(new_root.parent):
                         self._root = new_root
                     x = self._root
             else:
                 w = parent.left
-                if not _is_nil(w) and w.color == RED:
-                    # Case 1 (mirror)
+                if not self._is_nil(w) and w.color == RED:
                     w.color = BLACK
                     parent.color = RED
                     new_root = rotate(parent, "right", self._root)
-                    if _is_nil(new_root.parent):
+                    if self._is_nil(new_root.parent):
                         self._root = new_root
                     w = x.parent.left
 
-                w_left_black = _is_nil(w.left) or w.left.color == BLACK
-                w_right_black = _is_nil(w.right) or w.right.color == BLACK
+                w_left_black = self._is_nil(w.left) or w.left.color == BLACK
+                w_right_black = self._is_nil(w.right) or w.right.color == BLACK
 
                 if w_right_black and w_left_black:
-                    # Case 2 (mirror)
-                    if not _is_nil(w):
+                    if not self._is_nil(w):
                         w.color = RED
                     x = x.parent
                 else:
                     if w_left_black:
-                        # Case 3 (mirror)
-                        if not _is_nil(w.right):
+                        if not self._is_nil(w.right):
                             w.right.color = BLACK
-                        if not _is_nil(w):
+                        if not self._is_nil(w):
                             w.color = RED
                         new_root = rotate(w, "left", self._root)
-                        if _is_nil(new_root.parent):
+                        if self._is_nil(new_root.parent):
                             self._root = new_root
                         w = x.parent.left
 
-                    # Case 4 (mirror)
-                    if not _is_nil(w):
+                    if not self._is_nil(w):
                         w.color = x.parent.color
                     x.parent.color = BLACK
-                    if not _is_nil(w) and not _is_nil(w.left):
+                    if not self._is_nil(w) and not self._is_nil(w.left):
                         w.left.color = BLACK
                     new_root = rotate(x.parent, "right", self._root)
-                    if _is_nil(new_root.parent):
+                    if self._is_nil(new_root.parent):
                         self._root = new_root
                     x = self._root
 
@@ -417,12 +397,12 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             node = self._find(self._root, key)
-            return node.value if not _is_nil(node) else None
+            return node.value if not self._is_nil(node) else None
 
     def contains(self, key: Any) -> bool:
         """Return *True* if *key* is present."""
         with self._lock:
-            return not _is_nil(self._find(self._root, key))
+            return not self._is_nil(self._find(self._root, key))
 
     def update(self, key: Any, value: Any) -> None:
         """Update the value of an existing *key*.
@@ -441,14 +421,14 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """
         with self._lock:
             node = self._find(self._root, key)
-            if _is_nil(node):
+            if self._is_nil(node):
                 raise KeyError(f"Key not found: {key!r}")
             node.value = value
 
     def clear(self) -> None:
         """Remove all nodes from the tree."""
         with self._lock:
-            self._root = _NIL
+            self._root = self._NIL
             self._size = 0
 
     # ------------------------------------------------------------------
@@ -463,7 +443,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     def is_empty(self) -> bool:
         """Return *True* if the tree is empty."""
         with self._lock:
-            return _is_nil(self._root)
+            return self._is_nil(self._root)
 
     def height(self) -> int:
         """Return the tree height (-1 for empty, 0 for a single node)."""
@@ -471,7 +451,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             return self._height(self._root)
 
     def _height(self, node: RBNode | None) -> int:
-        if _is_nil(node):
+        if self._is_nil(node):
             return -1
         return 1 + max(self._height(node.left), self._height(node.right))
 
@@ -484,7 +464,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             If the tree is empty.
         """
         with self._lock:
-            if _is_nil(self._root):
+            if self._is_nil(self._root):
                 raise ValueError("Tree is empty")
             return self._min_node(self._root).key
 
@@ -497,7 +477,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             If the tree is empty.
         """
         with self._lock:
-            if _is_nil(self._root):
+            if self._is_nil(self._root):
                 raise ValueError("Tree is empty")
             return self._max_node(self._root).key
 
@@ -511,13 +491,13 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         Returns
         -------
         int
-            Black-height ≥ 0.  Returns 0 for an empty tree.
+            Black-height >= 0.  Returns 0 for an empty tree.
         """
         with self._lock:
             return self._black_height(self._root)
 
     def _black_height(self, node: RBNode | None) -> int:
-        if _is_nil(node):
+        if self._is_nil(node):
             return 0
         left_bh = self._black_height(node.left)
         add = 1 if node.color == BLACK else 0
@@ -540,17 +520,17 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
                 raise KeyError(f"Key not found: {key!r}")
             pred: RBNode | None = None
             node: RBNode = self._root
-            while not _is_nil(node):
+            while not self._is_nil(node):
                 if key < node.key:
                     node = node.left
                 elif key > node.key:
                     pred = node
                     node = node.right
                 else:
-                    if not _is_nil(node.left):
+                    if not self._is_nil(node.left):
                         pred = self._max_node(node.left)
                     break
-            return pred.key if pred is not None and not _is_nil(pred) else None
+            return pred.key if pred is not None and not self._is_nil(pred) else None
 
     def successor(self, key: Any) -> Any | None:
         """Return the in-order successor key, or *None*.
@@ -565,17 +545,17 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
                 raise KeyError(f"Key not found: {key!r}")
             succ: RBNode | None = None
             node: RBNode = self._root
-            while not _is_nil(node):
+            while not self._is_nil(node):
                 if key > node.key:
                     node = node.right
                 elif key < node.key:
                     succ = node
                     node = node.left
                 else:
-                    if not _is_nil(node.right):
+                    if not self._is_nil(node.right):
                         succ = self._min_node(node.right)
                     break
-            return succ.key if succ is not None and not _is_nil(succ) else None
+            return succ.key if succ is not None and not self._is_nil(succ) else None
 
     # ------------------------------------------------------------------
     # Validation
@@ -591,7 +571,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
           4. BST ordering is correct.
         """
         with self._lock:
-            if _is_nil(self._root):
+            if self._is_nil(self._root):
                 return True
             if self._root.color != BLACK:
                 return False
@@ -607,11 +587,11 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         return self.is_red_black_valid()
 
     def _check_no_red_red(self, node: RBNode | None) -> bool:
-        if _is_nil(node):
+        if self._is_nil(node):
             return True
         if node.color == RED and (
-            (not _is_nil(node.left) and node.left.color == RED)
-            or (not _is_nil(node.right) and node.right.color == RED)
+            (not self._is_nil(node.left) and node.left.color == RED)
+            or (not self._is_nil(node.right) and node.right.color == RED)
         ):
             return False
         return self._check_no_red_red(node.left) and self._check_no_red_red(node.right)
@@ -622,7 +602,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         current_bh: int,
         expected: list,
     ) -> bool:
-        if _is_nil(node):
+        if self._is_nil(node):
             if expected[0] is None:
                 expected[0] = current_bh
             return expected[0] == current_bh
@@ -637,7 +617,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         lo: Any,
         hi: Any,
     ) -> bool:
-        if _is_nil(node):
+        if self._is_nil(node):
             return True
         if lo is not None and node.key <= lo:
             return False
@@ -655,7 +635,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         """Return a deep copy of this tree (new nodes, same key/value/color)."""
         with self._lock:
             new_tree = RedBlackTree(allow_duplicates=self._allow_duplicates)
-            new_tree._root = self._copy_node(self._root, _NIL)
+            new_tree._root = self._copy_node(self._root, new_tree._NIL, new_tree._NIL)
             new_tree._size = self._size
             return new_tree
 
@@ -663,14 +643,15 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         self,
         node: RBNode | None,
         parent: RBNode,
+        nil: RBNode,
     ) -> RBNode:
-        if _is_nil(node):
-            return _NIL
+        if self._is_nil(node):
+            return nil
         new_node = RBNode(node.key, node.value)
         new_node.color = node.color
         new_node.parent = parent
-        new_node.left = self._copy_node(node.left, new_node)
-        new_node.right = self._copy_node(node.right, new_node)
+        new_node.left = self._copy_node(node.left, new_node, nil)
+        new_node.right = self._copy_node(node.right, new_node, nil)
         return new_node
 
     # ------------------------------------------------------------------
@@ -678,7 +659,7 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     # ------------------------------------------------------------------
 
     def _inorder(self, node: RBNode | None) -> Generator[Any, None, None]:
-        if _is_nil(node):
+        if self._is_nil(node):
             return
         yield from self._inorder(node.left)
         yield node.key
@@ -689,22 +670,22 @@ class RedBlackTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     # ------------------------------------------------------------------
 
     def _find(self, node: RBNode | None, key: Any) -> RBNode:
-        while not _is_nil(node):
+        while not self._is_nil(node):
             if key < node.key:
                 node = node.left
             elif key > node.key:
                 node = node.right
             else:
                 return node
-        return _NIL
+        return self._NIL
 
     def _min_node(self, node: RBNode) -> RBNode:
-        while not _is_nil(node.left):
+        while not self._is_nil(node.left):
             node = node.left
         return node
 
     def _max_node(self, node: RBNode) -> RBNode:
-        while not _is_nil(node.right):
+        while not self._is_nil(node.right):
             node = node.right
         return node
 
