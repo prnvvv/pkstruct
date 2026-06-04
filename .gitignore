@@ -55,9 +55,14 @@ ENV/
 # ==========================================
 
 .pytest_cache/
+.benchmarks/
 .coverage
 .coverage.*
+coverage/
+coverage.xml
 htmlcov/
+*.cover
+*.py,cover
 .tox/
 .nox/
 
@@ -141,7 +146,7 @@ site/
 # ==========================================
 # Temporary Files
 # ==========================================
-*.benchmarks
+
 *.tmp
 *.temp
 *.bak
@@ -208,3 +213,5 @@ PKSTRUCT-INFO
 # ==========================================
 *.history
 
+.github/
+.gitlab-ci.yml

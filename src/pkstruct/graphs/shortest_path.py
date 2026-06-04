@@ -10,12 +10,12 @@ import heapq
 import math
 from typing import Any
 
-from pkstruct.graphs.graph import Graph
 from pkstruct.graphs.exceptions import (
     NegativeCycleError,
     NoPathError,
     VertexNotFoundError,
 )
+from pkstruct.graphs.graph import Graph
 
 
 def dijkstra(

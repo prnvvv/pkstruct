@@ -4,15 +4,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from typing import Any, Generic, TypeVar, cast
 
+from pkstruct._help import HelpMixin
+from pkstruct._linear_shortcuts import LinearShortcutsMixin
+from pkstruct._str import StrMixin
 from pkstruct.linear.exceptions import (
     EmptyStructureError,
     IndexOutOfRangeError,
     ValidationError,
     ValueNotFoundError,
 )
-from pkstruct._help import HelpMixin
-from pkstruct._linear_shortcuts import LinearShortcutsMixin
-from pkstruct._str import StrMixin
 from pkstruct.shared.debugging import DebugTracer
 from pkstruct.shared.serializers import deserialize_from_json, serialize_to_json
 from pkstruct.shared.threading import StructureLock

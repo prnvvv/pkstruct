@@ -6,11 +6,11 @@ Topological sort algorithms: Kahn's algorithm and DFS-based sort.
 
 from __future__ import annotations
 
-from collections import deque, defaultdict
+from collections import deque
 from typing import Any
 
-from pkstruct.graphs.graph import Graph
 from pkstruct.graphs.exceptions import InvalidGraphOperationError
+from pkstruct.graphs.graph import Graph
 
 
 def topological_sort_kahn(graph: Graph) -> list[Any]:

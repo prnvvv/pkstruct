@@ -9,6 +9,7 @@ appends at the tail; dequeue removes from the head — both O(1).
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Iterator
 from typing import TypeVar, cast
 
@@ -193,6 +194,38 @@ class LinkedQueue(Queue[T], StrMixin, LinearShortcutsMixin, HelpMixin):
         list[T]
         """
         return self._list.to_list()
+
+    # ------------------------------------------------------------------ #
+    #  LeetCode-style methods                                              #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def sliding_window_maximum(cls, nums: list[int], k: int) -> list[int]:
+        dq: deque[int] = deque()
+        result: list[int] = []
+        for i, n in enumerate(nums):
+            while dq and dq[0] < i - k + 1:
+                dq.popleft()
+            while dq and nums[dq[-1]] < n:
+                dq.pop()
+            dq.append(i)
+            if i >= k - 1:
+                result.append(nums[dq[0]])
+        return result
+
+    @classmethod
+    def recent_counter(cls) -> type:
+        class RecentCounter:
+            def __init__(self) -> None:
+                self.pings: deque[int] = deque()
+
+            def ping(self, t: int) -> int:
+                self.pings.append(t)
+                while self.pings and self.pings[0] < t - 3000:
+                    self.pings.popleft()
+                return len(self.pings)
+
+        return RecentCounter
 
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #

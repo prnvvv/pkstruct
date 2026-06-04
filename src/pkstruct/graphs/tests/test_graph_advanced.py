@@ -9,43 +9,41 @@ from __future__ import annotations
 import math
 import random
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
+
 from pkstruct.graphs import (
-    Graph,
     DirectedGraph,
-    WeightedGraph,
+    Graph,
+    adjacency_matrix,
+    bellman_ford,
     bfs,
-    dfs,
     bfs_paths,
+    connected_components,
+    dfs,
     dfs_paths,
     dijkstra,
-    bellman_ford,
     floyd_warshall,
-    reconstruct_path,
-    kruskal,
-    prim,
-    connected_components,
-    is_connected,
-    is_bipartite,
     has_cycle,
     has_cycle_directed,
-    topological_sort_kahn,
-    topological_sort_dfs,
+    is_bipartite,
+    is_connected,
     kosaraju,
+    kruskal,
+    prim,
+    reconstruct_path,
     tarjan,
+    topological_sort_dfs,
+    topological_sort_kahn,
     visualize,
-    adjacency_matrix,
 )
 from pkstruct.graphs.exceptions import (
-    VertexNotFoundError,
     EdgeNotFoundError,
+    InvalidGraphOperationError,
     NegativeCycleError,
     NoPathError,
-    InvalidGraphOperationError,
+    VertexNotFoundError,
 )
-
 
 # ======================================================================
 # Edge-case graphs  (fixtures)
@@ -895,7 +893,7 @@ class TestInvariants:
     def test_mst_cycle_property(self, triangle_graph):
         mst = kruskal(triangle_graph)
         edges_set = set()
-        for u, v, w in mst:
+        for u, v, _w in mst:
             edges_set.add((u, v) if u <= v else (v, u))
         assert len(edges_set) == 2
 

@@ -29,8 +29,8 @@ Traversals (via __iter__ and explicit helpers)
     zigzag_order, vertical_order, boundary_traversal
 
 Interview utilities
-    find_lca, kth_smallest, kth_largest, range_query,
-    path_sum, root_to_leaf_paths, serialize, deserialize
+    lowest_common_ancestor, kth_smallest, kth_largest, range_query, is_valid,
+    path_sum, root_to_leaf_paths, serialize, deserialize, from_sorted_list
 
 Dunder
     __len__, __contains__, __iter__, __repr__
@@ -46,7 +46,6 @@ Space   O(n)
 from __future__ import annotations
 
 import collections
-import json
 from collections.abc import Generator, Iterator
 from typing import Any
 
@@ -96,6 +95,27 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
     def to_list(self) -> list[Any]:
         """Return all keys in ascending (in-order) order."""
         return list(self)
+
+    @classmethod
+    def from_sorted_list(cls, items: list[Any]) -> BinarySearchTree:
+        tree = cls()
+        tree._root = cls._sorted_list_to_bst(items, 0, len(items) - 1)
+        tree._size = len(items)
+        return tree
+
+    @staticmethod
+    def _sorted_list_to_bst(
+        items: list[Any],
+        lo: int,
+        hi: int,
+    ) -> TreeNode | None:
+        if lo > hi:
+            return None
+        mid = (lo + hi) // 2
+        node = TreeNode(items[mid])
+        node.left = BinarySearchTree._sorted_list_to_bst(items, lo, mid - 1)
+        node.right = BinarySearchTree._sorted_list_to_bst(items, mid + 1, hi)
+        return node
 
     # ------------------------------------------------------------------
     # Core CRUD
@@ -396,6 +416,10 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         with self._lock:
             return self._validate(self._root, None, None)
 
+    def is_valid(self) -> bool:
+        with self._lock:
+            return self._validate(self._root, None, None)
+
     def _validate(
         self,
         node: TreeNode | None,
@@ -511,6 +535,14 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
             for k in (key1, key2):
                 if not self.contains(k):
                     raise KeyError(f"Key not found: {k!r}")
+            node = self._lca(self._root, key1, key2)
+            return node.key if node is not None else None
+
+    def lowest_common_ancestor(self, key1: Any, key2: Any) -> Any | None:
+        with self._lock:
+            for k in (key1, key2):
+                if not self.contains(k):
+                    return None
             node = self._lca(self._root, key1, key2)
             return node.key if node is not None else None
 
@@ -648,77 +680,51 @@ class BinarySearchTree(HelpMixin, StrMixin, TreeShortcutsMixin):
         current.pop()
 
     def serialize(self) -> str:
-        """Serialize the tree to a JSON string (level-order with null sentinels).
-
-        Each node is encoded as a ``[key, value]`` pair so values are
-        preserved across round-trips.
-
-        Returns
-        -------
-        str
-            JSON representation that can be passed to :meth:`deserialize`.
-        """
         with self._lock:
-            if self._root is None:
-                return "[]"
-            result: list[Any | None] = []
-            queue: collections.deque[TreeNode | None] = collections.deque([self._root])
-            while queue:
-                node = queue.popleft()
-                if node is None:
-                    result.append(None)
-                else:
-                    result.append([node.key, node.value])
-                    queue.append(node.left)
-                    queue.append(node.right)
-            # Trim trailing nulls
-            while result and result[-1] is None:
-                result.pop()
-            return json.dumps(result)
+            result: list[str] = []
+            self._serialize_preorder(self._root, result)
+            return ",".join(result)
 
-    def deserialize(self, data: str) -> None:
-        """Rebuild the tree from a JSON string produced by :meth:`serialize`.
+    def _serialize_preorder(self, node: TreeNode | None, result: list[str]) -> None:
+        if node is None:
+            result.append("null")
+            return
+        result.append(str(node.key))
+        self._serialize_preorder(node.left, result)
+        self._serialize_preorder(node.right, result)
 
-        Clears any existing content before loading.
+    @classmethod
+    def deserialize(cls, data: str) -> BinarySearchTree:
+        tree = cls()
+        if not data:
+            return tree
+        it = iter(data.split(","))
+        tree._root = cls._deserialize_preorder(it)
+        tree._size = cls._count_nodes(tree._root)
+        return tree
 
-        Parameters
-        ----------
-        data:
-            JSON string as returned by :meth:`serialize`.
-        """
-        with self._lock:
-            self.clear()
-            raw: list[Any | None] = json.loads(data)
-            if not raw:
-                return
-            # Each entry is either None or a [key, value] pair
-            def _kv(entry: Any | None) -> tuple[Any, Any] | tuple[None, None]:
-                if entry is None:
-                    return None, None
-                if isinstance(entry, list) and len(entry) == 2:
-                    return entry[0], entry[1]
-                # Legacy format — plain key without value
-                return entry, None
+    @staticmethod
+    def _deserialize_preorder(it: Iterator[str]) -> TreeNode | None:
+        try:
+            val = next(it)
+        except StopIteration:
+            return None
+        if val == "null":
+            return None
+        try:
+            key = int(val)
+        except ValueError:
+            key = val
+        node = TreeNode(key)
+        node.left = BinarySearchTree._deserialize_preorder(it)
+        node.right = BinarySearchTree._deserialize_preorder(it)
+        return node
 
-            key0, val0 = _kv(raw[0])
-            self._root = TreeNode(key0, val0)
-            self._size = 1
-            queue: collections.deque[TreeNode] = collections.deque([self._root])
-            i = 1
-            while queue and i < len(raw):
-                node = queue.popleft()
-                if i < len(raw) and raw[i] is not None:
-                    k, v = _kv(raw[i])
-                    node.left = TreeNode(k, v)
-                    self._size += 1
-                    queue.append(node.left)
-                i += 1
-                if i < len(raw) and raw[i] is not None:
-                    k, v = _kv(raw[i])
-                    node.right = TreeNode(k, v)
-                    self._size += 1
-                    queue.append(node.right)
-                i += 1
+    @staticmethod
+    def _count_nodes(node: TreeNode | None) -> int:
+        if node is None:
+            return 0
+        return 1 + BinarySearchTree._count_nodes(node.left) + BinarySearchTree._count_nodes(node.right)
 
     def boundary_traversal(self) -> list[Any]:
         """Return keys in boundary order: left boundary + leaves + right boundary (reversed).

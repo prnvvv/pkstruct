@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, TypeVar
 
+from pkstruct.linear.exceptions import EmptyStructureError, IndexOutOfRangeError
 from pkstruct.linear.linked_lists._base import _LinkedListBase
 from pkstruct.linear.linked_lists.nodes import SinglyNode
 
@@ -115,6 +116,98 @@ class SinglyLinkedList(_LinkedListBase[T]):
                 cur_a = cur_a.next if cur_a else None
                 cur_b = cur_b.next if cur_b else None
             return cur_a.value if cur_a is not None else None
+
+    def find_middle(self) -> T:
+        with self._lock:
+            if self._size == 0:
+                raise EmptyStructureError("find_middle")
+            slow = self._head
+            fast = self._head
+            while fast is not None and fast.next is not None:
+                slow = slow.next
+                fast = fast.next.next
+            return slow.value
+
+    def merge_sorted(self, other: SinglyLinkedList[T]) -> SinglyLinkedList[T]:
+        with self._lock, other._lock:
+            result: SinglyLinkedList[T] = SinglyLinkedList()
+            cur_self = self._head
+            cur_other = other._head
+            while cur_self is not None and cur_other is not None:
+                if cur_self.value <= cur_other.value:
+                    result._append(cur_self.value)
+                    cur_self = cur_self.next
+                else:
+                    result._append(cur_other.value)
+                    cur_other = cur_other.next
+            while cur_self is not None:
+                result._append(cur_self.value)
+                cur_self = cur_self.next
+            while cur_other is not None:
+                result._append(cur_other.value)
+                cur_other = cur_other.next
+            return result
+
+    def remove_nth_from_end(self, n: int) -> T:
+        with self._lock:
+            if self._size == 0:
+                raise EmptyStructureError("remove_nth_from_end")
+            if n <= 0 or n > self._size:
+                raise IndexOutOfRangeError(n, self._size)
+            fast = self._head
+            for _ in range(n):
+                fast = fast.next
+            if fast is None:
+                return self._remove_node(self._head)
+            slow = self._head
+            while fast.next is not None:
+                slow = slow.next
+                fast = fast.next
+            target = slow.next
+            slow.next = target.next
+            if target is self._tail:
+                self._tail = slow
+            self._size -= 1
+            return target.value
+
+    def delete_duplicates(self) -> None:
+        with self._lock:
+            if self._size <= 1:
+                return
+            node = self._head
+            while node is not None and node.next is not None:
+                if node.value == node.next.value:
+                    node.next = node.next.next
+                    self._size -= 1
+                    if node.next is None:
+                        self._tail = node
+                else:
+                    node = node.next
+
+    def add_numbers(self, other: SinglyLinkedList[int]) -> SinglyLinkedList[int]:
+        with self._lock, other._lock:
+            result: SinglyLinkedList = SinglyLinkedList()
+            carry = 0
+            cur_self = self._head
+            cur_other = other._head
+            while cur_self is not None or cur_other is not None or carry:
+                val = carry
+                if cur_self is not None:
+                    val += cur_self.value
+                    cur_self = cur_self.next
+                if cur_other is not None:
+                    val += cur_other.value
+                    cur_other = cur_other.next
+                result._append(val % 10)
+                carry = val // 10
+            return result
+
+    def swap_pairs(self) -> None:
+        with self._lock:
+            node = self._head
+            while node is not None and node.next is not None:
+                node.value, node.next.value = node.next.value, node.value
+                node = node.next.next
 
     def visualize(self, style: str = "ascii") -> str:
         with self._lock:

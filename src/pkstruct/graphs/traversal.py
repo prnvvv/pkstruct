@@ -10,7 +10,6 @@ All functions operate on any ``Graph``-like object that provides
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Iterator
 from typing import Any
 
 from pkstruct.graphs.graph import Graph

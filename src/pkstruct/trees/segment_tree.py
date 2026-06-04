@@ -423,10 +423,7 @@ class SegmentTree(HelpMixin, StrMixin):
     def __contains__(self, item: object) -> bool:
         """Return True if item is in the tree.  Complexity: O(n log n)."""
         with self._lock:
-            for i in range(self._n):
-                if self.query(i, i) == item:
-                    return True
-            return False
+            return any(self.query(i, i) == item for i in range(self._n))
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""

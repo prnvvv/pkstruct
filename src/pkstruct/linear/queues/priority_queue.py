@@ -220,6 +220,25 @@ class PriorityQueue(Queue[T], StrMixin, LinearShortcutsMixin, HelpMixin):
             return [v for _, _, v in sorted(self._heap)]
 
     # ------------------------------------------------------------------ #
+    #  LeetCode-style methods                                              #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def kth_largest(cls, nums: list[int], k: int) -> int:
+        heap = nums[:k]
+        heapq.heapify(heap)
+        for x in nums[k:]:
+            if x > heap[0]:
+                heapq.heapreplace(heap, x)
+        return heap[0]
+
+    @classmethod
+    def top_k_frequent(cls, nums: list[int], k: int) -> list[int]:
+        from collections import Counter
+        freq = Counter(nums)
+        return [x for x, _ in heapq.nlargest(k, freq.items(), key=lambda x: x[1])]
+
+    # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #
     # ------------------------------------------------------------------ #
 

@@ -10,7 +10,6 @@ from collections import deque
 from typing import Any
 
 from pkstruct.graphs.graph import Graph
-from pkstruct.graphs.exceptions import VertexNotFoundError
 
 
 def connected_components(graph: Graph) -> list[list[Any]]:
@@ -118,11 +117,7 @@ def has_cycle(graph: Graph) -> bool:
                 return True
         return False
 
-    for v in graph:
-        if v not in visited:
-            if _dfs(v, None):
-                return True
-    return False
+    return any(v not in visited and _dfs(v, None) for v in graph)
 
 
 def has_cycle_directed(graph: Graph) -> bool:
@@ -150,8 +145,4 @@ def has_cycle_directed(graph: Graph) -> bool:
         color[v] = BLACK
         return False
 
-    for v in graph:
-        if color[v] == WHITE:
-            if _dfs(v):
-                return True
-    return False
+    return any(color[v] == WHITE and _dfs(v) for v in graph)

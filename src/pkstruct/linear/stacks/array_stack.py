@@ -45,11 +45,15 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
     3
     """
 
-    __slots__ = ("_data", "_lock")
+    __slots__ = ("_data", "_lock", "_min_data")
 
     def __init__(self, items: list[T] | None = None) -> None:
         self._data: list[T] = list(items) if items is not None else []
         self._lock: StructureLock = StructureLock()
+        self._min_data: list[T] = []
+        for item in self._data:
+            if not self._min_data or item <= self._min_data[-1]:
+                self._min_data.append(item)
 
     @classmethod
     def from_list(cls, items: list[T]) -> ArrayStack[T]:
@@ -78,6 +82,8 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
         """
         with self._lock:
             self._data.append(value)
+            if not self._min_data or value <= self._min_data[-1]:
+                self._min_data.append(value)
 
     def pop(self) -> T:
         """
@@ -95,7 +101,10 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
         with self._lock:
             if not self._data:
                 raise EmptyStructureError("pop from an empty stack")
-            return self._data.pop()
+            value = self._data.pop()
+            if self._min_data and value == self._min_data[-1]:
+                self._min_data.pop()
+            return value
 
     def peek(self) -> T:
         """
@@ -143,6 +152,7 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
         with self._lock:
             new = ArrayStack[T]()
             new._data = self._data.copy()
+            new._min_data = list(self._min_data)
             return new
 
     def validate(self) -> bool:
@@ -172,6 +182,58 @@ class ArrayStack(Stack[T], StrMixin, LinearShortcutsMixin, HelpMixin):
         """
         with self._lock:
             return list(reversed(self._data))
+
+    # ------------------------------------------------------------------ #
+    #  LeetCode-style methods                                              #
+    # ------------------------------------------------------------------ #
+
+    def min_stack(self) -> T | None:
+        with self._lock:
+            return self._min_data[-1] if self._min_data else None
+
+    @classmethod
+    def is_valid_parentheses(cls, s: str) -> bool:
+        mapping = {')': '(', '}': '{', ']': '['}
+        stack: list[str] = []
+        for char in s:
+            if char in mapping:
+                top = stack.pop() if stack else '#'
+                if top != mapping[char]:
+                    return False
+            else:
+                stack.append(char)
+        return not stack
+
+    @classmethod
+    def evaluate_rpn(cls, tokens: list[str]) -> int:
+        stack: list[int] = []
+        for token in tokens:
+            if token in {'+', '-', '*', '/'}:
+                b = stack.pop()
+                a = stack.pop()
+                if token == '+':
+                    stack.append(a + b)
+                elif token == '-':
+                    stack.append(a - b)
+                elif token == '*':
+                    stack.append(a * b)
+                else:
+                    stack.append(int(a / b))
+            else:
+                stack.append(int(token))
+        return stack[0]
+
+    @classmethod
+    def daily_temperatures(cls, temperatures: list[int]) -> list[int]:
+        n = len(temperatures)
+        result = [0] * n
+        stack: list[int] = []
+        for i, t in enumerate(temperatures):
+            while stack and t > temperatures[stack[-1]]:
+                idx = stack.pop()
+                result[idx] = i - idx
+            stack.append(i)
+        return result
 
     # ------------------------------------------------------------------ #
     #  Dunder methods                                                      #

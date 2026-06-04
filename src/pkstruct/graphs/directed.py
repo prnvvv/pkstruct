@@ -6,7 +6,6 @@ Directed graph implementation with direction-specific operations.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import Any
 
 from pkstruct.graphs.exceptions import VertexNotFoundError

@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pkstruct.graphs.graph import Graph
 from pkstruct.graphs.directed import DirectedGraph
 from pkstruct.graphs.exceptions import InvalidGraphOperationError
+from pkstruct.graphs.graph import Graph
 
 
 def kosaraju(graph: Graph) -> list[list[Any]]:

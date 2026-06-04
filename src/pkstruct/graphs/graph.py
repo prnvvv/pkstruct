@@ -9,12 +9,13 @@ All public operations are thread-safe via ``StructureLock``.
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Iterator
 from typing import Any
 
 from pkstruct._help import HelpMixin
 from pkstruct._str import StrMixin
-from pkstruct.graphs.exceptions import VertexNotFoundError, EdgeNotFoundError
+from pkstruct.graphs.exceptions import EdgeNotFoundError, VertexNotFoundError
 from pkstruct.shared.threading import StructureLock
 
 
@@ -302,10 +303,7 @@ class Graph(HelpMixin, StrMixin):
         """Return a deep copy of the graph."""
         with self._lock:
             cls = type(self)
-            if cls is Graph:
-                new_graph = cls(directed=self._directed)
-            else:
-                new_graph = cls()
+            new_graph = cls(directed=self._directed) if cls is Graph else cls()
             for v in self._adj:
                 new_graph._adj[v] = dict(self._adj[v])
             new_graph._edge_count = self._edge_count
@@ -326,6 +324,114 @@ class Graph(HelpMixin, StrMixin):
         from pkstruct.graphs.visualization import visualize as _viz
 
         return _viz(self, show_weights=show_weights)
+
+    # ------------------------------------------------------------------
+    # LeetCode-style methods
+    # ------------------------------------------------------------------
+
+    def clone_graph(self) -> Graph:
+        from copy import deepcopy
+        with self._lock:
+            cls = type(self)
+            new_graph = cls(directed=self._directed) if cls is Graph else cls()
+            new_graph._adj = deepcopy(self._adj)
+            new_graph._edge_count = self._edge_count
+            return new_graph
+
+    @classmethod
+    def number_of_islands(cls, grid: list[list[str]]) -> int:
+        if not grid:
+            return 0
+        rows, cols = len(grid), len(grid[0])
+        visited = [[False] * cols for _ in range(rows)]
+
+        def dfs(r: int, c: int) -> None:
+            if r < 0 or r >= rows or c < 0 or c >= cols or grid[r][c] == '0' or visited[r][c]:
+                return
+            visited[r][c] = True
+            dfs(r + 1, c)
+            dfs(r - 1, c)
+            dfs(r, c + 1)
+            dfs(r, c - 1)
+
+        count = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == '1' and not visited[r][c]:
+                    dfs(r, c)
+                    count += 1
+        return count
+
+    @classmethod
+    def course_schedule(cls, num_courses: int, prerequisites: list[list[int]]) -> bool:
+        adj: list[list[int]] = [[] for _ in range(num_courses)]
+        indegree = [0] * num_courses
+        for u, v in prerequisites:
+            adj[v].append(u)
+            indegree[u] += 1
+        q = deque([i for i in range(num_courses) if indegree[i] == 0])
+        count = 0
+        while q:
+            v = q.popleft()
+            count += 1
+            for neighbor in adj[v]:
+                indegree[neighbor] -= 1
+                if indegree[neighbor] == 0:
+                    q.append(neighbor)
+        return count == num_courses
+
+    @classmethod
+    def alien_order(cls, words: list[str]) -> str:
+        from collections import defaultdict
+        adj: dict[str, set[str]] = defaultdict(set)
+        indegree: dict[str, int] = defaultdict(int)
+        for word in words:
+            for c in word:
+                indegree[c] = 0
+        for i in range(len(words) - 1):
+            w1, w2 = words[i], words[i + 1]
+            min_len = min(len(w1), len(w2))
+            if len(w1) > len(w2) and w1[:min_len] == w2[:min_len]:
+                return ""
+            for j in range(min_len):
+                if w1[j] != w2[j]:
+                    if w2[j] not in adj[w1[j]]:
+                        adj[w1[j]].add(w2[j])
+                        indegree[w2[j]] += 1
+                    break
+        q = deque([c for c in indegree if indegree[c] == 0])
+        result: list[str] = []
+        while q:
+            c = q.popleft()
+            result.append(c)
+            for neighbor in adj[c]:
+                indegree[neighbor] -= 1
+                if indegree[neighbor] == 0:
+                    q.append(neighbor)
+        if len(result) != len(indegree):
+            return ""
+        return "".join(result)
+
+    @classmethod
+    def network_delay_time(cls, times: list[list[int]], n: int, k: int) -> int:
+        import heapq
+        adj: list[list[tuple[int, int]]] = [[] for _ in range(n + 1)]
+        for u, v, w in times:
+            adj[u].append((v, w))
+        dist = [float('inf')] * (n + 1)
+        dist[k] = 0
+        pq = [(0, k)]
+        while pq:
+            d, u = heapq.heappop(pq)
+            if d > dist[u]:
+                continue
+            for v, w in adj[u]:
+                nd = d + w
+                if nd < dist[v]:
+                    dist[v] = nd
+                    heapq.heappush(pq, (nd, v))
+        max_dist = max(dist[1:])
+        return -1 if max_dist == float('inf') else int(max_dist)
 
     # ------------------------------------------------------------------
     # Dunders

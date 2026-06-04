@@ -6,10 +6,7 @@ ASCII visualization utilities for graphs.
 
 from __future__ import annotations
 
-from typing import Any
-
 from pkstruct.graphs.graph import Graph
-from pkstruct.graphs.exceptions import VertexNotFoundError
 
 
 def visualize(graph: Graph, show_weights: bool = True) -> str:

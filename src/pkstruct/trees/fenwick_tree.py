@@ -340,10 +340,7 @@ class FenwickTree(HelpMixin, StrMixin):
     def __contains__(self, item: object) -> bool:
         """Return True if item is in the tree.  Complexity: O(n log n)."""
         with self._lock:
-            for i in range(1, self._n + 1):
-                if self.range_query(i, i) == item:
-                    return True
-            return False
+            return any(self.range_query(i, i) == item for i in range(1, self._n + 1))
 
     def __bool__(self) -> bool:
         """Return True if the tree is non-empty."""

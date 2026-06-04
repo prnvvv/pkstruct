@@ -9,8 +9,8 @@ from __future__ import annotations
 import heapq
 from typing import Any
 
-from pkstruct.graphs.graph import Graph
 from pkstruct.graphs.exceptions import InvalidGraphOperationError
+from pkstruct.graphs.graph import Graph
 
 
 def kruskal(graph: Graph) -> list[tuple[Any, Any, float]]:

@@ -6,7 +6,6 @@ Comprehensive tests for BinarySearchTree.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
@@ -440,29 +439,29 @@ class TestSerialization:
     def test_serialize_roundtrip(self) -> None:
         bst = _build([5, 3, 7, 2, 4, 6, 8])
         data = bst.serialize()
-        restored = BinarySearchTree()
-        restored.deserialize(data)
+        restored = BinarySearchTree.deserialize(data)
         assert list(restored) == [2, 3, 4, 5, 6, 7, 8]
         assert len(restored) == len(bst)
 
     def test_serialize_empty(self) -> None:
         bst = BinarySearchTree()
         data = bst.serialize()
-        assert data == "[]"
-        restored = BinarySearchTree()
-        restored.deserialize(data)
+        restored = BinarySearchTree.deserialize(data)
         assert restored.is_empty()
 
-    def test_deserialize_empty_array(self) -> None:
-        bst = BinarySearchTree()
-        bst.deserialize("[]")
-        assert bst.is_empty()
-
-    def test_serialize_is_json(self) -> None:
-        bst = _build([1, 2, 3])
+    def test_serialize_single(self) -> None:
+        bst = _build([42])
         data = bst.serialize()
-        parsed = json.loads(data)
-        assert isinstance(parsed, list)
+        restored = BinarySearchTree.deserialize(data)
+        assert list(restored) == [42]
+
+    def test_deserialize_empty_string(self) -> None:
+        restored = BinarySearchTree.deserialize("")
+        assert restored.is_empty()
+
+    def test_deserialize_null(self) -> None:
+        restored = BinarySearchTree.deserialize("null")
+        assert restored.is_empty()
 
 
 # ---------------------------------------------------------------------------

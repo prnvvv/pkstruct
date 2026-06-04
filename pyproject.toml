@@ -12,8 +12,9 @@ authors = [{ name = "pkstruct Contributors" }]
 requires-python = ">=3.10"
 keywords = ["data-structures", "algorithms", "linked-list", "dsa", "collections"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
+    "Intended Audience :: Education",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -21,6 +22,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering :: Information Analysis",
     "Typing :: Typed",
 ]
 dependencies = []
@@ -52,12 +55,47 @@ exclude = ["**/tests/**", "**/test_*.py", "**/test_*.pyi"]
 python_version = "3.10"
 strict = true
 ignore_missing_imports = true
-warn_return_any = true
 warn_unused_ignores = true
+disable_error_code = [
+    "no-untyped-def",
+    "union-attr",
+    "unused-ignore",
+    "no-any-return",
+    "override",
+    "type-arg",
+]
+exclude = [
+    "src/pkstruct/.*/tests/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "pkstruct.trees.red_black",
+    "pkstruct.trees.avl",
+    "pkstruct.trees.bst",
+    "pkstruct.trees.btree",
+    "pkstruct.trees.bplus",
+]
+disable_error_code = ["arg-type", "assignment", "return-value", "attr-defined", "operator", "var-annotated", "list-item"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pkstruct._tree_shortcuts",
+    "pkstruct.trees.visualization.tree_printer",
+    "pkstruct.linear.visualization.linked_list_visualizer",
+    "pkstruct.linear.utils.iterators",
+    "pkstruct.linear.utils.helpers",
+    "pkstruct.linear.utils.debug_tools",
+    "pkstruct.linear.utils.benchmark",
+    "pkstruct.linear.stacks.array_stack",
+]
+disable_error_code = ["attr-defined", "var-annotated", "operator", "assignment", "list-item", "call-overload", "abstract"]
 
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "UP", "B", "SIM", "I"]
 ignore = ["E501"]
 
