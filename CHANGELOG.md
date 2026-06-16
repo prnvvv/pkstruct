@@ -5,6 +5,22 @@ All notable changes to pkstruct will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-06-16
+
+### Added
+- CONTRIBUTING.md, CODE_OF_CONDUCT.md, MAINTAINERS.md with project governance
+- Issue templates (bug report, feature request) and PR template
+- `py.typed` marker already present for PEP 561 compliance
+
+### Changed
+- README restructured: added "Why pkstruct?" section, removed maintainer-only publishing docs
+- pyproject.toml: updated author list with founders, expanded keywords, added classifiers
+- Badge URLs fixed to match `prnvvv/pkstruct` repository
+
+### Removed
+- AGENTS.md and requirements-dev.txt removed from repository (gitignored)
+- .github/ removed from .gitignore so templates are tracked
+
 ## [0.1.1] - 2026-06-02
 
 ### Added

@@ -7,7 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/pkstruct)](https://pypi.org/project/pkstruct/)
 [![Python](https://img.shields.io/pypi/pyversions/pkstruct)](https://pypi.org/project/pkstruct/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-898_✔️-success)](https://github.com/prnvvv/pkstruct)
+[![Tests](https://img.shields.io/badge/tests-899_✔️-success)](https://github.com/prnvvv/pkstruct)
 [![Type Checked](https://img.shields.io/badge/mypy-strict-blue)](https://github.com/python/mypy)
 [![Code Style](https://img.shields.io/badge/code%20style-ruff-000000)](https://github.com/astral-sh/ruff)
 
@@ -703,7 +703,7 @@ git clone https://github.com/prnvvv/pkstruct.git
 cd pkstruct
 pip install -e ".[dev]"
 
-# Run tests (898 tests)
+# Run tests (899 tests)
 pytest -v
 
 # Type check
