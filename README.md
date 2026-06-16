@@ -2,18 +2,27 @@
 
 # pkstruct
 
-**Industrial-grade data structures and algorithms for Python ≥ 3.10**
+**A production-grade, open-source Python library providing comprehensive data structures and algorithms with type hints, thread safety, and extensive testing.**
 
 [![PyPI](https://img.shields.io/pypi/v/pkstruct)](https://pypi.org/project/pkstruct/)
 [![Python](https://img.shields.io/pypi/pyversions/pkstruct)](https://pypi.org/project/pkstruct/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-898_✔️-success)](https://github.com/anomalyco/pkstruct)
+[![Tests](https://img.shields.io/badge/tests-898_✔️-success)](https://github.com/prnvvv/pkstruct)
 [![Type Checked](https://img.shields.io/badge/mypy-strict-blue)](https://github.com/python/mypy)
 [![Code Style](https://img.shields.io/badge/code%20style-ruff-000000)](https://github.com/astral-sh/ruff)
 
 </div>
 
 ---
+
+## Why pkstruct?
+
+| Need | pkstruct gives you |
+|------|-------------------|
+| **Interview prep** | Linked lists, trees, graphs with LeetCode-style helpers (palindrome, cycle detection, LCA, topological sort, etc.) |
+| **Production code** | Thread-safe structures (`threading.RLock`), strict type hints, 898+ tests |
+| **Learning DSA** | Consistent API across all structures, built-in ASCII visualization, runtime help system |
+| **Competitive programming** | Drop-in collection of trees (BST, AVL, Red-Black, Fenwick, Segment, Interval) and graph algorithms (Dijkstra, Kruskal, Tarjan, etc.) |
 
 ## 📦 Installation
 
@@ -676,11 +685,21 @@ run_full_benchmark()
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Issue Tracker](https://github.com/prnvvv/pkstruct/issues)
+- [Feature Requests](https://github.com/prnvvv/pkstruct/issues/new?template=feature_request.md)
+
+---
+
 ## 🔧 Development
 
 ```bash
 # Clone and install
-git clone https://github.com/anomalyco/pkstruct.git
+git clone https://github.com/prnvvv/pkstruct.git
 cd pkstruct
 pip install -e ".[dev]"
 
@@ -694,14 +713,15 @@ mypy src/pkstruct
 ruff check src/pkstruct
 ```
 
-## 📦 Publishing
-
-```bash
-python -m build
-twine check dist/*
-twine upload dist/*
-```
+---
 
 ## 📄 License
 
 MIT © pkstruct Contributors
+
+## 🙌 Credits
+
+pkstruct is created and maintained by:
+
+- **Prannavakhanth** ([@prnvvv](https://github.com/prnvvv)) — Founder & Lead Maintainer
+- **Priyanka Kaliraj** ([@pri-23-k](https://github.com/pri-23-k)) — Co-Founder & Maintainer

@@ -5,12 +5,24 @@ build-backend = "hatchling.build"
 [project]
 name = "pkstruct"
 version = "0.1.1"
-description = "Industrial-grade data structures and algorithms toolkit for Python"
+description = "A production-grade, open-source Python library providing comprehensive data structures and algorithms with type hints, thread safety, and extensive testing"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "pkstruct Contributors" }]
+authors = [
+    { name = "Prannavakhanth", email = "prannavakhanth12@gmail.com" },
+    { name = "Priyanka Kaliraj", email = "pri2303k@gmail.com" },
+    { name = "pkstruct Contributors" },
+]
 requires-python = ">=3.10"
-keywords = ["data-structures", "algorithms", "linked-list", "dsa", "collections"]
+keywords = [
+    "data-structures", "algorithms", "dsa",
+    "linked-list", "stack", "queue", "deque",
+    "tree", "binary-search-tree", "avl-tree", "red-black-tree",
+    "b-tree", "bplus-tree", "segment-tree", "fenwick-tree", "interval-tree",
+    "graph", "graph-algorithms",
+    "competitive-programming", "interview",
+    "collections",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -21,6 +33,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Education",
     "Topic :: Scientific/Engineering :: Information Analysis",
@@ -42,10 +56,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/pkstruct/pkstruct"
-Repository = "https://github.com/pkstruct/pkstruct"
-Documentation = "https://pkstruct.readthedocs.io"
-"Bug Tracker" = "https://github.com/pkstruct/pkstruct/issues"
+Homepage = "https://github.com/prnvvv/pkstruct"
+Repository = "https://github.com/prnvvv/pkstruct"
+Documentation = "https://github.com/prnvvv/pkstruct#readme"
+"Bug Tracker" = "https://github.com/prnvvv/pkstruct/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pkstruct"]

@@ -212,6 +212,7 @@ PKSTRUCT-INFO
 # Development artifacts
 # ==========================================
 *.history
+AGENTS.md
+requirements-dev.txt
 
-.github/
 .gitlab-ci.yml
