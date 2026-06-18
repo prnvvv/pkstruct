@@ -20,7 +20,7 @@
 | Need | pkstruct gives you |
 |------|-------------------|
 | **Interview prep** | Linked lists, trees, graphs with LeetCode-style helpers (palindrome, cycle detection, LCA, topological sort, etc.) |
-| **Production code** | Thread-safe structures (`threading.RLock`), strict type hints, 898+ tests |
+| **Production code** | Thread-safe structures (`threading.RLock`), strict type hints, 899+ tests |
 | **Learning DSA** | Consistent API across all structures, built-in ASCII visualization, runtime help system |
 | **Competitive programming** | Drop-in collection of trees (BST, AVL, Red-Black, Fenwick, Segment, Interval) and graph algorithms (Dijkstra, Kruskal, Tarjan, etc.) |
 
@@ -240,7 +240,7 @@ ArrayStack().daily_temperatures([73, 74, 75]) # [1, 1, 0]
 q = LinkedQueue([1, 2, 3])
 q.enqueue(4)
 q.dequeue()      # 1
-q.peek()         # 2
+q.front()        # 2
 
 # LeetCode extras
 LinkedQueue().sliding_window_maximum([1,3,-1,-3,5,3,6,7], 3)  # [3,3,5,5,6,7]
@@ -253,9 +253,9 @@ cq.dequeue()     # 1
 
 # ── Priority Queue (min-heap) ──
 pq = PriorityQueue()
-pq.push("task1", priority=3)
-pq.push("task2", priority=1)
-pq.pop()         # "task2"
+pq.enqueue("task1", priority=3)
+pq.enqueue("task2", priority=1)
+pq.dequeue()     # "task2"
 
 # LeetCode extras
 PriorityQueue().kth_largest([3,2,1,5,6,4], 2)  # 5
@@ -264,10 +264,10 @@ PriorityQueue().top_k_frequent([1,1,1,2,2,3], 2)  # [1, 2]
 # ── Deque ──
 d = LinkedDeque([1, 2, 3])
 d.append(4)
-d.appendleft(0)
-d.pop()          # 4
-d.popleft()      # 0
-d.rotate(2)      # rotate right by 2
+d.append(0, side="left")   # append to left side
+d.pop()                    # 4 (from right)
+d.pop(side="left")         # 0 (from left)
+d.rotate(2)                # rotate right by 2
 ```
 
 ### Linear — Utilities
@@ -314,17 +314,17 @@ run_full_benchmark()                            # full suite
 bst = BinarySearchTree()
 bst.insert(10, value="ten")
 bst.insert(5, value="five")
-bst[5]                       # "five"  (via __getitem__)
 bst.search(10)               # ("ten", Node)
 bst.delete(5)
 len(bst)                     # 1
 
-# Traversals
-list(bst.inorder())          # [5, 10, 15]
-list(bst.preorder())         # [10, 5, 15]
-list(bst.postorder())        # [5, 15, 10]
-list(bst.level_order())      # [10, 5, 15]
-list(bst.zigzag())           # [10, 15, 5]
+# Traversals (via standalone functions)
+from pkstruct.trees.traversal import inorder, preorder, postorder, levelorder
+list(inorder(bst.root))          # [5, 10, 15]
+list(preorder(bst.root))         # [10, 5, 15]
+list(postorder(bst.root))        # [5, 15, 10]
+list(levelorder(bst.root))       # [10, 5, 15]
+list(bst.zigzag_order())          # [10, 15, 5]
 
 # Navigation Shortcuts
 bst.root                     # root node
@@ -435,6 +435,7 @@ from pkstruct.trees.tree_helpers import (
     validate_bst_order, path_to_node,
     level_of_node, max_width,
 )
+from pkstruct.trees.node import TreeNode
 
 # Traversal functions (work on any binary tree root)
 bst = BinarySearchTree()
