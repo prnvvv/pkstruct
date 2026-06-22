@@ -1,9 +1,6 @@
 include README.md
 include LICENSE
 include CHANGELOG.md
-include SECURITY.md
-include CODE_OF_CONDUCT.md
-include CONTRIBUTING.md
 recursive-include src/pkstruct *.py *.pyi
 global-exclude __pycache__
 global-exclude *.py[co]

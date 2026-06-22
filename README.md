@@ -2,7 +2,7 @@
 
 # pkstruct
 
-**A production-grade, open-source Python library providing comprehensive data structures and algorithms with type hints, thread safety, and extensive testing.**
+**A production-grade Python library providing comprehensive data structures and algorithms with type hints, thread safety, and extensive testing.**
 
 [![PyPI](https://img.shields.io/pypi/v/pkstruct)](https://pypi.org/project/pkstruct/)
 [![Python](https://img.shields.io/pypi/pyversions/pkstruct)](https://pypi.org/project/pkstruct/)
@@ -686,16 +686,6 @@ run_full_benchmark()
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
-
-- [Code of Conduct](CODE_OF_CONDUCT.md)
-- [Issue Tracker](https://github.com/prnvvv/pkstruct/issues)
-- [Feature Requests](https://github.com/prnvvv/pkstruct/issues/new?template=feature_request.md)
-
----
-
 ## 🔧 Development
 
 ```bash
@@ -718,7 +708,7 @@ ruff check src/pkstruct
 
 ## 📄 License
 
-MIT © pkstruct Contributors
+MIT © Prannavakhanth & Priyanka Kaliraj
 
 ## 🙌 Credits
 
