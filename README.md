@@ -4,7 +4,7 @@
 
 **A production-grade Python library providing comprehensive data structures and algorithms with type hints, thread safety, and extensive testing.**
 
-[![PyPI]([https://img.shields.io/pypi/v/pkstruct)](https://pypi.org/project/pkstruct/](https://pypi.org/project/pkstruct/))
+[![PyPI](https://img.shields.io/pypi/v/pkstruct)](https://pypi.org/project/pkstruct/)
 [![Python](https://img.shields.io/pypi/pyversions/pkstruct)](https://pypi.org/project/pkstruct/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-899_✔️-success)](https://github.com/prnvvv/pkstruct)
